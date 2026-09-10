@@ -711,6 +711,11 @@ window.addEventListener('error', function(e){
   var GH={ owner:window.GH_OWNER||'BIANXIN56', repo:window.GH_REPO||'workbench-data', path:window.GH_PATH||'data.json' };
   var TOKEN_KEY='gh_token';
   window.__wbSyncReady=null;
+  /* v83：__wbCloudReady 只在 pullAll 真正结束（成功/失败/云端为空）时 resolve。
+     与 __wbSyncReady 的区别：后者在「尚未配置令牌」时是立即 resolve 的 Promise，
+     不能作为「云端数据已就位」的信号——首屏渲染必须等前者。 */
+  var _crr=null;
+  window.__wbCloudReady=new Promise(function(res){ _crr=res; });
   function isCloud(){
     var p=location.protocol; if(p!=='http:'&&p!=='https:') return false;
     var h=location.hostname;
@@ -757,10 +762,28 @@ window.addEventListener('error', function(e){
     window.__wbSyncSkipPush = true;
     var _set=localStorage.setItem.bind(localStorage);
     var dirty={}, pt=null, pushing=false, needPush=false, pushRetry=0, forceFull=false;
+    /* v83：seed（默认模板）标记持久化。
+       页面在云端数据到达前会自行生成默认月份模板写入 localStorage；
+       必须记住「这个键当前的内容是自动生成的、用户没碰过」，
+       以便 push 时不覆盖云端、pull 时放心被云端覆盖。
+       标记存 wb_seedmarks_v83（不以 wb_ax_ 开头，不参与上云镜像）。 */
+    function _seedMarks(){ try{ return JSON.parse(localStorage.getItem('wb_seedmarks_v83')||'{}'); }catch(e){ return {}; } }
+    function _seedMark(k,on){
+      if(k==='wb_ax_lastpushed') return;
+      var m=_seedMarks();
+      if(on){ m[k]=1; } else if(m[k]){ delete m[k]; }
+      window.__wbSeedKeys=m;
+      try{ _set('wb_seedmarks_v83', JSON.stringify(m)); }catch(e){}
+    }
+    window.__wbSeedKeys=_seedMarks();
     localStorage.setItem=function(k,v){
       var old=null;
       try{ old=localStorage.getItem(k); }catch(e){}
       _set(k,v);
+      if(k!==TOKEN_KEY){
+        if(window.__wbSeeding){ _seedMark(k,true); }
+        else if(window.__wbSeedKeys && window.__wbSeedKeys[k]){ _seedMark(k,false); }
+      }
       if(k!==TOKEN_KEY && old!==v && !window.__wbSyncSkipPush){
         dirty[k]=1; if(!pt) pt=setTimeout(pushAll,700);
       }
@@ -790,7 +813,7 @@ window.addEventListener('error', function(e){
         if(!r.ok) throw new Error('GET '+r.status);
         return r.json();
       }).then(function(j){
-        if(!j||!j.content) { dbg('[pull] 云端 content 为空'); _set(_doneKey,'1'); setStatus('已同步（空）', '#27ae60'); window.__wbSyncSkipPush=false; return; }
+        if(!j||!j.content) { dbg('[pull] 云端 content 为空'); _set(_doneKey,'1'); setStatus('已同步（空）', '#27ae60'); window.__wbSyncSkipPush=false; if(_crr) _crr(); return; }
         var obj=JSON.parse(b64dec(j.content));
         var recs=obj.records||[];
         dbg('[pull] 解码成功，记录数='+recs.length);
@@ -799,6 +822,9 @@ window.addEventListener('error', function(e){
         recs.forEach(function(r){
           if(!r.key || r.key.indexOf('ls:')!==0) return;
           var k=r.key.slice(3);
+          /* v83：lastpushed 是「本机视角」的元数据，绝不能被云端覆盖。
+             否则他端的哈希记录会顶掉本机记录，本机未推送编辑会被误判为已同步而被云端冲掉。 */
+          if(k==='wb_ax_lastpushed') return;
           /* v26：云端 data 可能是"字符串"(app push 的正常格式) 或"对象"(GitHub 手动编辑的格式)。
              统一规范化为字符串再写入 localStorage——否则对象直接 _set 会被 localStorage 转成
              "[object Object]" 导致 dashboard 整份损坏，永远拉不回来。 */
@@ -813,12 +839,27 @@ window.addEventListener('error', function(e){
                · 本机存在且!=lastPushed（本机有未推送编辑，或首装无记录）→ 保留本机、回推云端，绝不覆盖。
              这条护栏直接修复"配置令牌/重开页面后本地编辑被旧云端版本整条冲掉"的顽疾。 */
           var lp=_lastPushed();
+          var _lpKeys=0; for(var _lk2 in lp){ if(_lk2.indexOf('wb_ax_')===0 && _lk2!=='wb_ax_lastpushed') _lpKeys++; }
           /* v81fix：旧版 lastpushed 存全量值快照，曾膨胀到数 MB 卡死护栏（正确数据进不来）。
              检测到异常大则直接重置为空，避免旧幽灵快照继续干扰判断。 */
           var _lpSz=0; for(var _kk in lp){ _lpSz+=(''+lp[_kk]).length; }
           if(_lpSz>50000){ lp={}; _saveLastPushed(lp); dbg('[pull] 检测到旧版膨胀 lastpushed，已重置'); }
           var localSynced = (localData!==null && hashOf(localData)===lp[k]);
           if(localData!==null && !localSynced){
+            /* v83（核心修复）：以下两种情况「无条件采用云端」，绝不回推。
+               (a) _lpKeys===0 —— 本机从未成功推送过任何 wb_ax 数据键，
+                   说明本机不可能持有「云端不知道的编辑」，内容只可能是新装空壳或自动生成的默认模板；
+               (b) _seedNow —— 该键当前内容就是自动生成的默认模板（用户没碰过）。
+               旧逻辑这两种情况都会走进 else 分支「保留本机并回推云端」，
+               把默认模板（如 8 月的 15.8/2/8）推上去覆盖云端真实数据——
+               这正是反复出现「导入不生效 / 数据被改回默认值 / 顺延莫名变多」的根因。 */
+            var _seedNow = !!(window.__wbSeedKeys && window.__wbSeedKeys[k]);
+            if(_lpKeys===0 || _seedNow){
+              _set(k, cloudData); lp[k]=hashOf(cloudData); _saveLastPushed(lp);
+              changed=true; pulled++;
+              dbg('[pull] '+k+' 本机无有效编辑（新装/默认模板）→ 无条件采用云端');
+              return;
+            }
             if(k in lp){
               dbg('[pull] '+k+' 检测到本机未推送编辑，保留本机，跳过云端覆盖');
             } else {
@@ -838,19 +879,22 @@ window.addEventListener('error', function(e){
         if(changed){
           _set(_reloadKey, String(rc+1));
           window.__wbSyncSkipPush=false;
-          setStatus('已同步云端最新 ✓', '#27ae60');
+          setStatus('已同步云端最新 ✓', '#27ae60'); if(_crr) _crr();
           /* v50fix：不再 location.reload()——改为原地重渲染（bootApp 从 localStorage 重读并刷新全部视图），
              避免丢未保存编辑、避免触发浏览器 SW 原生"重新加载"弹窗、避免重载死循环 */
           try{ bootApp(); }catch(e){ console.warn('[pull] 原地重渲染失败', e); }
         } else {
           setStatus('已同步 ✓', '#27ae60');
-          window.__wbSyncSkipPush=false;
+          window.__wbSyncSkipPush=false; if(_crr) _crr();
         }
       }).catch(function(e){
         dbg('[pull] 失败: '+e.message);
         console.warn('[sync] pull失败', e);
-        setStatus('同步失败：'+e.message, '#c0392b');
-        window.__wbSyncSkipPush=false;
+        /* v83：拉取失败（401/断网/限流）时必须保持「禁止上传」。
+           旧代码在此把 SkipPush 置 false，导致本机（此时可能只是默认模板）继续往上推，
+           在根本没拿到云端数据的情况下覆盖掉云端正确数据。宁可暂时不同步，也不能污染真相源。 */
+        setStatus('同步失败（已暂停上传，保护云端数据）', '#c0392b');
+        if(_crr) _crr();
       });
     }
     function pushAll(){
@@ -872,7 +916,11 @@ window.addEventListener('error', function(e){
            （修复 saveDays/saveResData 未标脏导致清单/成果从未上云的历史 bug） */
         var allKeys=[];
         for(var _i=0;_i<localStorage.length;_i++){ var _lk=localStorage.key(_i); if(_lk && _lk.indexOf('wb_ax_')===0) allKeys.push(_lk); }
+        var _seed=window.__wbSeedKeys||{};
         allKeys.forEach(function(k){
+          /* v83：仍是默认模板（用户没编辑过）且云端已有该键 → 保留云端版本，绝不上云。
+             pushAll 是全量镜像，不拦就会把空客户端自动生成的默认月份推上去覆盖真实数据。 */
+          if(_seed[k] && existing['ls:'+k] && existing['ls:'+k].data){ dbg('[push] '+k+' 为未编辑的默认模板，保留云端版本'); return; }
           existing['ls:'+k]={ key:'ls:'+k, data:localStorage.getItem(k)||'', updated_at:String(Date.now()) };
         });
         var content={ records:Object.keys(existing).map(function(k){ return existing[k]; }) };
@@ -929,7 +977,7 @@ window.addEventListener('error', function(e){
     wrap.appendChild(tip); wrap.appendChild(inp); wrap.appendChild(btn); wrap.appendChild(skip);
     function done(t){ localStorage.setItem(TOKEN_KEY,t); localStorage.removeItem('wb_sync_skip'); wrap.remove(); cb(t); }
     btn.onclick=function(){ var t=inp.value.trim(); if(t) done(t); };
-    skip.onclick=function(){ localStorage.setItem('wb_sync_skip','1'); wrap.remove(); };
+    skip.onclick=function(){ localStorage.setItem('wb_sync_skip','1'); wrap.remove(); if(_crr) _crr(); };
     inp.onkeydown=function(e){ if(e.key==='Enter') btn.click(); };
     (document.body||document.documentElement).appendChild(wrap);
     setTimeout(function(){ try{inp.focus();}catch(e){} }, 60);
@@ -941,6 +989,7 @@ window.addEventListener('error', function(e){
   } else if(localStorage.getItem('wb_sync_skip')==='1'){
     window.__wbSyncEnabled='offline';
     window.__wbSyncReady = Promise.resolve(); /* 用户选择暂不开启同步：纯本地缓存使用（不跨设备） */
+    if(_crr) _crr();
   } else {
     window.__wbSyncEnabled='pending';
     window.__wbSyncReady = Promise.resolve(); /* 先本地渲染，用户输入令牌后再同步 */
@@ -961,7 +1010,7 @@ window.addEventListener('error', function(e){
         '<button id="wb_btn_skp" style="padding:4px 12px;border:0;border-radius:4px;background:rgba(255,255,255,.18);color:#fff;cursor:pointer">稍后</button>';
       (document.body||document.documentElement).appendChild(d);
       var b1=document.getElementById('wb_btn_cfg'); if(b1) b1.onclick=function(){ askToken(function(){ location.reload(); }); };
-      var b2=document.getElementById('wb_btn_skp'); if(b2) b2.onclick=function(){ localStorage.setItem('wb_sync_skip','1'); d.remove(); };
+      var b2=document.getElementById('wb_btn_skp'); if(b2) b2.onclick=function(){ localStorage.setItem('wb_sync_skip','1'); d.remove(); if(_crr) _crr(); };
     }
     if(document.body) paint(); else document.addEventListener('DOMContentLoaded', paint);
   })();
@@ -1368,7 +1417,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v82</span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v83</span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -3379,7 +3428,11 @@ function getDashData(ym){
   // 关键修复：直接返回已存数据，不再每次读取都合并默认模板。
   // 旧实现 deepMergeDefaults(defaultDashData, stored) 会把默认模块反复合并回来，
   // 导致用户删除的模块/板块永远被覆盖（"删了又回来"）。现在用户的增删/编辑全部持久保留。
-  if(!dashData[ym]){ dashData[ym] = defaultDashData(ym); saveDash(); }
+  if(!dashData[ym]){
+    /* v83：标记为「默认模板写入」——此类内容不得覆盖云端已有数据（见 pushAll / pullAll 守卫） */
+    window.__wbSeeding=true;
+    try{ dashData[ym] = defaultDashData(ym); saveDash(); } finally { window.__wbSeeding=false; }
+  }
   migrateFunnelFields(dashData[ym], ym);
   migrateV80(dashData[ym], ym);
   return dashData[ym];
@@ -6014,10 +6067,17 @@ function bootApp(){
 window.__wbRerender = bootApp; /* 供同步拉取完成后刷新 */
 var __wbBooted=false;
 function __wbBootOnce(){ if(__wbBooted) return; __wbBooted=true; bootApp(); }
-/* 等云端同步就绪后再渲染首屏，避免时序错乱；异常时 8s 兜底先渲染防白屏 */
-if(window.__wbSyncReady && window.__wbSyncReady.then){
-  window.__wbSyncReady.then(__wbBootOnce);
-  setTimeout(__wbBootOnce, 8000);
+/* v83：首屏渲染必须等「云端数据真正落到 localStorage」之后再开始。
+   旧代码等的是 __wbSyncReady——它在「尚未配置令牌」时是立即 resolve 的 Promise，
+   于是页面在云端数据到达前就用空本地渲染 → getDashData 缺月 → 自动生成默认模板并落库，
+   这份默认模板随后被推送上云，覆盖掉云端正确数据（反复「导入不生效」的真根因）。
+   现在等 __wbCloudReady（由 pullAll 真正结束时 resolve）：
+   · 已开启同步 → 等云端（15s 兜底防白屏）
+   · 等待用户填令牌 → 先不渲染，避免空本地造默认模板
+   · 用户选「稍后」/非云端环境 → 立即渲染（纯本地） */
+if(window.__wbCloudReady && window.__wbCloudReady.then){
+  window.__wbCloudReady.then(__wbBootOnce);
+  setTimeout(__wbBootOnce, 15000);
 } else { __wbBootOnce(); }
 </script>
 </body>
