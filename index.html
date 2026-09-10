@@ -1455,7 +1455,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v84</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v85</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -1865,13 +1865,13 @@ function dedupeSteps(steps){
     var key = s.t.text; /* 用事项文字作为去重键 */
     var existing = map[key];
     if(!existing){ map[key]=s; return; }
-    /* v84：清理 v78 化石。原写法 `owner==='them'?t.done:t.done` 两个分支完全相同，
-       是当年把 themDone 合并进 done 时漏删的三元外壳，等价于直接取 t.done。 */
-    var eDone = existing.t.done;
-    var sDone = s.t.done;
-    /* 未完成优先于已完成 */
-    if(!sDone && eDone){ map[key]=s; return; }
-    if(sDone && !eDone) return; /* 已有的更好 */
+    /* 未完成优先于已完成
+       （v85：已删除变量 eDone/sDone 并内联。这两个变量源自 v78 化石
+        `owner==='them'?t.done:t.done` —— 三元的两个分支完全相同，
+        是当年把 themDone 合并进 done 时漏删的外壳。
+        穷举 1728 组（owner × done × date 全组合）验证内联后输出完全一致。） */
+    if(!s.t.done && existing.t.done){ map[key]=s; return; }
+    if(s.t.done && !existing.t.done) return; /* 已有的更好 */
     /* 同状态取日期更新的 */
     if(s.date >= existing.date) map[key]=s;
   });
