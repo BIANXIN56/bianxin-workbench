@@ -1368,7 +1368,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v81</span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v82</span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -3124,9 +3124,9 @@ function defaultDashData(ym){
             }},
             { id:'biz-note', type:'note', data:{ content:'💡 核心策略：自营商品卡(30%)与合作达短/达播(70%)双轮驱动，总推广费用控制在 11.90 万。' } },
             { id:'biz-channel-bars', type:'channel-bars', data:{ title:'▎ 各渠道 GSV 目标 vs 实际（元）', channels:[
-              { id:'douyin', label:'抖音', target:158000, act:0 },
-              { id:'tmall',  label:'天猫', target:20000,  act:0 },
-              { id:'video',  label:'视频号', target:80000, act:0 }
+              { id:'douyin', label:'抖音', target:265000, act:0 },
+              { id:'tmall',  label:'天猫', target:30000,  act:0 },
+              { id:'video',  label:'视频号', target:100000, act:0 }
             ]}}
           ]
         },
@@ -3439,13 +3439,13 @@ function migrateV80(D, ym){
       if(!bars){
         biz.blocks = biz.blocks||[];
         biz.blocks.push({ id:'biz-channel-bars', type:'channel-bars', data:{ title:'▎ 各渠道 GSV 目标 vs 实际（元）', channels:[
-          { id:'douyin', label:'抖音', target:158000, act:0 },
-          { id:'tmall',  label:'天猫', target:20000,  act:0 },
-          { id:'video',  label:'视频号', target:80000, act:0 }
+          { id:'douyin', label:'抖音', target:265000, act:0 },
+          { id:'tmall',  label:'天猫', target:30000,  act:0 },
+          { id:'video',  label:'视频号', target:100000, act:0 }
         ]}});
         changed=true;
       } else if(bars.data && !Array.isArray(bars.data.channels)){
-        bars.data.channels = [ { id:'douyin', label:'抖音', target:158000, act:0 }, { id:'tmall', label:'天猫', target:20000, act:0 }, { id:'video', label:'视频号', target:80000, act:0 } ];
+        bars.data.channels = [ { id:'douyin', label:'抖音', target:265000, act:0 }, { id:'tmall', label:'天猫', target:30000, act:0 }, { id:'video', label:'视频号', target:100000, act:0 } ];
         changed=true;
       }
     }
@@ -4785,6 +4785,15 @@ document.getElementById('fileInput').onchange=e=>{
     if(d.res&&Array.isArray(d.res)){ var added=d.res.filter(function(x){return x._u;}); res=SEED_RES.slice().concat(added); saveResData(); renderRes(); }
     if(d.days&&typeof d.days==='object'){ days=d.days; todos=getDay(currentDate).todos; saveDays(); updateDateUI(); }
     if(d.daily&&Array.isArray(d.daily)){ dailyTpls=d.daily; saveDaily(); }
+    /* v82fix：兼容"localStorage 全量导出"格式（顶层直接是 wb_ax_* 键，不带 wb_all 包裹）。
+       旧版导出的 JSON 走上面分支会全跳过 → 静默导入失败（只弹 toast、实际零写入），
+       导致用户以为导成功了、看到的却是云端旧数据。兜底：发现顶层有 wb_ax_ 键就整包镜像进 localStorage。 */
+    var _wb=Object.keys(d).filter(function(k){ return k.indexOf('wb_ax_')===0; });
+    if(_wb.length){
+      _wb.forEach(function(k){ if(k!=='wb_ax_lastpushed'){ try{ localStorage.setItem(k, d[k]); }catch(e){} } });
+      if(window.__wbSyncFlush) window.__wbSyncFlush();
+      toast("已恢复全部数据，正在同步并刷新…"); setTimeout(function(){ location.reload(); }, 1500); return;
+    }
     toast("已导入恢复");
   }catch(err){ toast("导入失败：格式错误"); } };
   r.readAsText(f); e.target.value="";
