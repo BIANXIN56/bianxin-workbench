@@ -724,6 +724,40 @@ window.addEventListener('error', function(e){
   }
   if(!isCloud()){ window.__wbSyncEnabled=false; return; }
 
+  /* ===== v84 数据保险：云端覆盖本机之前，先给本机留底 =====
+     背景：同步架构是「云端唯一真相源」，pullAll 会用云端整坨覆盖本机。
+     一旦云端是脏的（或空客户端把默认模板推上去过），本机正确数据会被无声冲掉，
+     且不留任何痕迹——过去只能靠逻辑推测，拿不到现场。
+     现在：每次覆盖前把本机旧值存一份，最多留 5 份，界面可一键回滚 / 导出。
+     存 wb_snap_v84（不以 wb_ax_ 开头 → 不参与 pushAll 全量镜像，不会上云、不撑大云端）。 */
+  var SNAP_KEY='wb_snap_v84', SNAP_MAX=5;
+  window.__wbSnapBuf=null; window.__wbSnapReason='';
+  function _snapList(){ try{ var a=JSON.parse(localStorage.getItem(SNAP_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function _snapPersist(list){
+    try{ localStorage.setItem(SNAP_KEY, JSON.stringify(list)); return true; }
+    catch(e){
+      /* 配额超限：丢最老的再试一次；仍失败就放弃本次留底，绝不影响主流程 */
+      try{ list.pop(); localStorage.setItem(SNAP_KEY, JSON.stringify(list)); return true; }
+      catch(e2){ return false; }
+    }
+  }
+  function _snapBegin(reason){ window.__wbSnapBuf={}; window.__wbSnapReason=reason; }
+  function _snapKey(k){
+    var b=window.__wbSnapBuf; if(!b) return;
+    var old=null; try{ old=localStorage.getItem(k); }catch(e){}
+    if(old!==null) b[k]=old;
+  }
+  function _snapCommit(){
+    var b=window.__wbSnapBuf; window.__wbSnapBuf=null;
+    if(!b) return;
+    var ks=Object.keys(b); if(!ks.length) return;
+    var list=_snapList();
+    var size=0; ks.forEach(function(k){ size+=String(b[k]).length; });
+    list.unshift({ ts:Date.now(), reason:window.__wbSnapReason||'', keys:ks, size:size, data:b });
+    while(list.length>SNAP_MAX) list.pop();
+    _snapPersist(list);
+    try{ console.log('[数据保险] 已留存覆盖前版本：'+ks.length+' 个键 ('+ks.join(', ')+')，约 '+Math.round(size/1024)+'KB'); }catch(e){}
+  }
   function api(tk, method, body){
     return fetch('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/contents/'+GH.path, {
       method:method,
@@ -818,6 +852,7 @@ window.addEventListener('error', function(e){
         var recs=obj.records||[];
         dbg('[pull] 解码成功，记录数='+recs.length);
         var changed=false, pulled=0;
+        _snapBegin('云端覆盖前');
         /* 云端恒为准，本机恒为缓存 */
         recs.forEach(function(r){
           if(!r.key || r.key.indexOf('ls:')!==0) return;
@@ -855,6 +890,7 @@ window.addEventListener('error', function(e){
                这正是反复出现「导入不生效 / 数据被改回默认值 / 顺延莫名变多」的根因。 */
             var _seedNow = !!(window.__wbSeedKeys && window.__wbSeedKeys[k]);
             if(_lpKeys===0 || _seedNow){
+              _snapKey(k);
               _set(k, cloudData); lp[k]=hashOf(cloudData); _saveLastPushed(lp);
               changed=true; pulled++;
               dbg('[pull] '+k+' 本机无有效编辑（新装/默认模板）→ 无条件采用云端');
@@ -868,10 +904,12 @@ window.addEventListener('error', function(e){
             if(window.__markDirty) window.__markDirty(k);
             return;
           }
+          _snapKey(k);
           _set(k, cloudData); lp[k]=hashOf(cloudData); _saveLastPushed(lp);
           changed=true; pulled++;
           dbg('[pull] '+k+' 采用云端版本');
         });
+        _snapCommit();
         _set(_doneKey,'1');
         dbg('[pull] 采用云端 '+pulled+' 条记录');
         dbg('[pull] 核验: items='+(localStorage.getItem('wb_ax_items_v2')?('有'+localStorage.getItem('wb_ax_items_v2').length+'字符'):'空')
@@ -1417,7 +1455,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v83</span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v84</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -1827,8 +1865,10 @@ function dedupeSteps(steps){
     var key = s.t.text; /* 用事项文字作为去重键 */
     var existing = map[key];
     if(!existing){ map[key]=s; return; }
-    var eDone = existing.t.owner==='them'?existing.t.done:existing.t.done;
-    var sDone = s.t.owner==='them'?s.t.done:s.t.done;
+    /* v84：清理 v78 化石。原写法 `owner==='them'?t.done:t.done` 两个分支完全相同，
+       是当年把 themDone 合并进 done 时漏删的三元外壳，等价于直接取 t.done。 */
+    var eDone = existing.t.done;
+    var sDone = s.t.done;
     /* 未完成优先于已完成 */
     if(!sDone && eDone){ map[key]=s; return; }
     if(sDone && !eDone) return; /* 已有的更好 */
@@ -6079,6 +6119,109 @@ if(window.__wbCloudReady && window.__wbCloudReady.then){
   window.__wbCloudReady.then(__wbBootOnce);
   setTimeout(__wbBootOnce, 15000);
 } else { __wbBootOnce(); }
+</script>
+
+<script>
+/* ===== v84 数据保险面板 =====
+   只读展示 + 显式回滚，不做任何自动改写。
+   回滚写回本机后刷新：此时本机 != lastpushed 指纹 → pullAll 判定为「有未推送编辑」
+   → 保留本机并回推云端，回滚后的版本即成为新的真相源。 */
+(function(){
+  var SNAP_KEY='wb_snap_v84';
+  function list(){ try{ var a=JSON.parse(localStorage.getItem(SNAP_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function fmt(ts){ var d=new Date(ts); var p=function(x){ return x<10?('0'+x):(''+x); };
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+  function kb(n){ return Math.round(n/1024)+'KB'; }
+
+  function renderCount(){
+    var el=document.getElementById('snapCount'); if(!el) return;
+    var l=list();
+    el.textContent = l.length ? ('留底'+l.length) : '';
+  }
+
+  function closePanel(){ var p=document.getElementById('snapPanel'); if(p) p.remove(); }
+
+  function openPanel(){
+    closePanel();
+    var l=list();
+    var d=document.createElement('div');
+    d.id='snapPanel';
+    d.style.cssText='position:fixed;right:16px;top:56px;z-index:99999;width:min(420px,92vw);max-height:70vh;overflow:auto;'
+      +'background:#fff;border:1px solid #dde3e8;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.16);'
+      +'padding:16px;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#263238;';
+    var h='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+      +'<b style="font-size:14px;font-weight:500;">数据保险 · 覆盖前自动留底</b>'
+      +'<span id="snapClose" style="cursor:pointer;color:#90a4ae;font-size:18px;line-height:1;">×</span></div>'
+      +'<div style="font-size:12px;color:#607d8b;margin-bottom:12px;">'
+      +'每次云端要覆盖本机时，会自动把被覆盖的本机旧版本存一份，最多留 5 份。数据出问题可来回退。</div>';
+    if(!l.length){
+      h+='<div style="padding:18px;text-align:center;color:#90a4ae;background:#fafbfc;border-radius:8px;">'
+        +'暂无留底<br><span style="font-size:12px;">（还没有发生过云端覆盖本机的情况）</span></div>';
+    } else {
+      l.forEach(function(s,i){
+        h+='<div style="border:1px solid #eceff1;border-radius:8px;padding:10px;margin-bottom:8px;">'
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+          +'<div style="flex:1;min-width:0;">'
+          +'<div style="font-weight:500;">'+fmt(s.ts)+'</div>'
+          +'<div style="font-size:12px;color:#78909c;margin-top:2px;">'+(s.reason||'')+' · '+kb(s.size||0)+'</div>'
+          +'<div style="font-size:12px;color:#546e7a;margin-top:4px;word-break:break-all;">涉及：'+(s.keys||[]).join('、')+'</div>'
+          +'</div>'
+          +'<button class="snap-roll" data-i="'+i+'" style="flex:none;font-size:12px;padding:4px 10px;border-radius:6px;'
+          +'border:1px solid #ffb74d;background:#fff8e1;color:#e65100;cursor:pointer;">回滚</button>'
+          +'</div></div>';
+      });
+    }
+    h+='<div style="display:flex;gap:8px;margin-top:12px;">'
+      +'<button id="snapExport" style="flex:1;font-size:12px;padding:7px;border-radius:6px;border:1px solid #cfd8dc;'
+      +'background:#fafbfc;color:#37474f;cursor:pointer;">导出全部留底 + 本机现状</button>'
+      +'</div>'
+      +'<div style="font-size:12px;color:#90a4ae;margin-top:8px;">导出文件不含 GitHub 令牌。</div>';
+    d.innerHTML=h;
+    document.body.appendChild(d);
+
+    var c=document.getElementById('snapClose'); if(c) c.onclick=closePanel;
+    Array.prototype.forEach.call(d.querySelectorAll('.snap-roll'), function(b){
+      b.onclick=function(){
+        var i=parseInt(b.getAttribute('data-i'),10); var s=list()[i]; if(!s) return;
+        var ks=s.keys||Object.keys(s.data||{});
+        if(!confirm('回滚到 '+fmt(s.ts)+' 的版本？\n\n'
+          +'将覆盖这 '+ks.length+' 项：'+ks.join('、')+'\n'
+          +'其余数据不受影响。\n\n回滚后会刷新页面，并把该版本推回云端。')) return;
+        var data=s.data||{};
+        Object.keys(data).forEach(function(k){
+          try{ localStorage.setItem(k, data[k]); }catch(e){ alert('写入失败：'+k); }
+        });
+        closePanel();
+        location.reload();
+      };
+    });
+    var ex=document.getElementById('snapExport');
+    if(ex) ex.onclick=function(){
+      var out={ exported_at:new Date().toISOString(), version:'v84', snapshots:list(), current:{} };
+      for(var i=0;i<localStorage.length;i++){
+        var k=localStorage.key(i);
+        if(!k) continue;
+        if(k.toLowerCase().indexOf('token')>=0) continue;   /* 绝不导出令牌 */
+        try{ out.current[k]=localStorage.getItem(k); }catch(e){}
+      }
+      var blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='工作台现场快照_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'')+'.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); },2000);
+    };
+  }
+
+  function bind(){
+    var b=document.getElementById('snapBtn');
+    if(b && !b.__bound){ b.__bound=1; b.onclick=openPanel; }
+    renderCount();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind); else bind();
+  setTimeout(bind, 1200);
+  setTimeout(bind, 4000);
+})();
 </script>
 </body>
 </html>
