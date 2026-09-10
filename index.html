@@ -777,6 +777,9 @@ window.addEventListener('error', function(e){
        从而做到"绝不冲掉未推送的本地编辑"。 */
     function _lastPushed(){ try{ return JSON.parse(localStorage.getItem('wb_ax_lastpushed')||'{}'); }catch(e){ return {}; } }
     function _saveLastPushed(m){ try{ localStorage.setItem('wb_ax_lastpushed', JSON.stringify(m)); }catch(e){} }
+    /* v81fix：lastpushed 仅存「值的哈希」而非值本身——旧版存全量快照曾膨胀到数 MB 卡死护栏。
+       cyrb53 53位哈希，碰撞概率可忽略；护栏只需判断"本地自上次推送后改没改"，哈希足够。 */
+    function hashOf(s){ if(s===null||s===undefined) return '0'; s=String(s); var h1=0xdeadbeef^0,h2=0x41c6ce57^0,i=s.length; while(i--){ var c=s.charCodeAt(i); h1=Math.imul(h1^c,2654435761); h2=Math.imul(h2^c,1597334677); } h1=Math.imul(h1^(h1>>>16),2246822507); h1^=Math.imul(h2^(h2>>>13),3266489909); h2=Math.imul(h2^(h2>>>16),2246822507); h2^=Math.imul(h1^(h1>>>13),3266489909); return (4294967296*(2097151&h2)+(h1>>>0)).toString(36); }
     function pullAll(){
       var rc=parseInt(localStorage.getItem(_reloadKey)||'0',10);
       dbg('[pull] 开始 token='+(tk?('已填'+tk.length+'字符'):'空')+' reloadCount='+rc);
@@ -810,7 +813,11 @@ window.addEventListener('error', function(e){
                · 本机存在且!=lastPushed（本机有未推送编辑，或首装无记录）→ 保留本机、回推云端，绝不覆盖。
              这条护栏直接修复"配置令牌/重开页面后本地编辑被旧云端版本整条冲掉"的顽疾。 */
           var lp=_lastPushed();
-          var localSynced = (localData!==null && localData===lp[k]);
+          /* v81fix：旧版 lastpushed 存全量值快照，曾膨胀到数 MB 卡死护栏（正确数据进不来）。
+             检测到异常大则直接重置为空，避免旧幽灵快照继续干扰判断。 */
+          var _lpSz=0; for(var _kk in lp){ _lpSz+=(''+lp[_kk]).length; }
+          if(_lpSz>50000){ lp={}; _saveLastPushed(lp); dbg('[pull] 检测到旧版膨胀 lastpushed，已重置'); }
+          var localSynced = (localData!==null && hashOf(localData)===lp[k]);
           if(localData!==null && !localSynced){
             if(k in lp){
               dbg('[pull] '+k+' 检测到本机未推送编辑，保留本机，跳过云端覆盖');
@@ -820,7 +827,7 @@ window.addEventListener('error', function(e){
             if(window.__markDirty) window.__markDirty(k);
             return;
           }
-          _set(k, cloudData); lp[k]=cloudData; _saveLastPushed(lp);
+          _set(k, cloudData); lp[k]=hashOf(cloudData); _saveLastPushed(lp);
           changed=true; pulled++;
           dbg('[pull] '+k+' 采用云端版本');
         });
@@ -876,7 +883,7 @@ window.addEventListener('error', function(e){
           if(r.status===409) throw new Error('CONFLICT');
           if(!r.ok) throw new Error('PUT '+r.status);
           /* v51fix：PUT 成功 → 记录本次推送内容，供 pull 判断"本机是否已与云端同步" */
-          var lp=_lastPushed(); allKeys.forEach(function(k){ lp[k]=localStorage.getItem(k); }); _saveLastPushed(lp);
+          var lp=_lastPushed(); allKeys.forEach(function(k){ lp[k]=hashOf(localStorage.getItem(k)); }); _saveLastPushed(lp);
         });
       }).catch(function(e){
         if(String(e.message)==='CONFLICT'){
@@ -1361,7 +1368,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v80</span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v81</span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
