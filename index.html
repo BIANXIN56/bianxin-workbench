@@ -1455,7 +1455,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v88</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v89</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -5033,15 +5033,40 @@ function purgeGhostTodos(){
   if(removed>0 && typeof saveDays==='function'){ saveDays(); }
   return removed>0;
 }
+/* v89：固定项「起始日」规则——键为固定项 id，值为该日起才出现（早于此日既不注入、也清除残留）。
+   为什么不写在 dailyTpls 模板字段上（旧做法 from:"2026-08-28"）：
+   dailyTpls 会被云端同步(约4880行)、导入/内嵌恢复(约5279行)、bootApp 重载(约6048行) 整体替换成
+   localStorage/云端里的副本，而云端模板没有这个自定义字段 → from 被冲掉 → 9003 又被注入到 8.28 之前。
+   规则放代码常量 → 与数据解耦，永不失效。要改起始日，只改这一处。 */
+const DAILY_FROM = {9003:'2026-08-28'};
+/* v89：清除早于起始日、被误注入并落库的固定项残留（如 8.28 之前的 9003）。
+   幂等：每次启动按 DAILY_FROM 核对一遍，脏数据自愈。只删固定项 id，不碰任何用户自建待办。 */
+function purgeEarlyDaily(){
+  if(!days || typeof days!=='object') return false;
+  var removed=0;
+  Object.keys(days).forEach(function(date){
+    var day=days[date];
+    if(!day || !Array.isArray(day.todos)) return;
+    var before=day.todos.length;
+    day.todos=day.todos.filter(function(t){
+      var f=DAILY_FROM[t.id];
+      return !(f && date < f);
+    });
+    removed += before-day.todos.length;
+  });
+  if(removed>0 && typeof saveDays==='function'){ saveDays(); }
+  return removed>0;
+}
 function getDay(date){ if(!days[date]) days[date]={todos:[],scratch:''}; ensureDaily(date); return days[date]; }
 function ensureDaily(date){
   const day=days[date]; if(!day) return;
   /* 固定项按规则注入当天显示：tp.all=true → 每天（含周末）；否则仅工作日（周一~周五）；
-     带 from 的固定项（如 9003）从该日起才出现。注入只是内存投影，不自动落库。 */
+     DAILY_FROM 中登记了起始日的固定项（如 9003 从 2026-08-28 起）早于该日不注入。
+     注入只是内存投影，不自动落库。 */
   var dow=new Date(date+'T00:00:00').getDay();
   (dailyTpls||[]).forEach(function(tp){
     if(suppressedSeeds && suppressedSeeds.has(tp.id)) return;
-    if(tp.from && date < tp.from) return;
+    var f=DAILY_FROM[tp.id]; if(f && date < f) return;
     if(!tp.all && (dow===0 || dow===6)) return;
     var existing = day.todos.find(function(t){ return _sameId(t.id,tp.id) && t.daily; });
     if(!existing){
@@ -5184,14 +5209,7 @@ let days = loadDays();
         }
       });
     });
-    /* 删除早于 2026-08-28 的 9003：from 规则只挡"新增"、不删"已存的越界旧记录"，
-       v87 之前已在 8.17/8.18 等早期日期误存了 9003，这里一次性清掉。 */
-    Object.keys(days).forEach(function(d){
-      if(d < '2026-08-28'){
-        var day=days[d]; if(!day||!day.todos) return;
-        day.todos=day.todos.filter(function(t){ return String(t.id)!=='9003'; });
-      }
-    });
+    /* 早于起始日的固定项残留（如 8.28 之前的 9003）由 purgeEarlyDaily() 每次启动幂等清除，此处不再重复。 */
     localStorage.setItem('wb_days_v86c','1');
   }catch(e){}
 })();
@@ -5201,13 +5219,11 @@ const KEY_DAILY = "wb_ax_daily_v1";
 const SEED_DAILY = [
   {id:9001, contact:"安棋", text:"【视频】16:00 审核达人短视频视频", note:"", owner:"me"},
   {id:9002, contact:"安棋", text:"【名单】17:00 筛选达人短视频名单", note:"", owner:"me"},
-  {id:9003, contact:"小红书", text:"添加小红书直播博主微信", note:"", owner:"me", from:"2026-08-28"}
+  {id:9003, contact:"小红书", text:"添加小红书直播博主微信", note:"", owner:"me"}
 ];
 function loadDaily(){ try{ const r=localStorage.getItem(KEY_DAILY); if(r) return JSON.parse(r); }catch(e){} return JSON.parse(JSON.stringify(SEED_DAILY)); }
 function saveDaily(){ localStorage.setItem(KEY_DAILY, JSON.stringify(dailyTpls)); if(window.__markDirty) window.__markDirty(KEY_DAILY); }
 let dailyTpls = loadDaily();
-/* 把种子的 from（起始日）并入已存模板，保证历史日不提前出现 9003 这类后加的固定项 */
-SEED_DAILY.forEach(function(s){ var t=dailyTpls.find(function(x){return _sameId(x.id,s.id);}); if(t && s.from && !t.from) t.from=s.from; });
 /* v32：种子抑制列表——用户手动删除过的种子项 ID 集合，ensureDaily 跳过这些 ID 不再注入 */
 const KEY_SEED_SUPP = 'wb_ax_seed_suppressed_v1';
 function loadSeedSuppressed(){ try{ return new Set(JSON.parse(localStorage.getItem(KEY_SEED_SUPP)||'[]')); }catch(e){ return new Set(); } }
@@ -6045,6 +6061,7 @@ function bootApp(){
   dashData = loadDash();
   days = loadDays();
   purgeGhostTodos();   /* v54：剔除历史幽灵项，保证渲染/推送的都是干净数据 */
+  purgeEarlyDaily();   /* v89：剔除早于起始日被误注入的固定项（9003 在 8.28 前），幂等 */
   dailyTpls = loadDaily();
   res = loadRes();
   todos = getDay(currentDate).todos;
