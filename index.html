@@ -1455,7 +1455,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v87</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v88</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -5096,7 +5096,7 @@ let days = loadDays();
    幂等：跑过就打 wb_days_v86 标记，永不再跑。 */
 (function migrateV86(){
   try{
-    if(localStorage.getItem('wb_days_v86b')) return;
+    if(localStorage.getItem('wb_days_v86c')) return;
     var g={}, extra=false;
     Object.keys(days).sort().forEach(function(d){
       (days[d].todos||[]).forEach(function(t){
@@ -5114,7 +5114,12 @@ let days = loadDays();
     });
     if(extra){
       var nd={};
-      Object.keys(days).sort().forEach(function(d){ nd[d]={todos:[],scratch:(days[d]&&days[d].scratch)||''}; });
+      /* 重建时保留固定项(9001/9002/9003)：它们不进 g（上面已 skip），旧版重建把整类漏掉
+         导致本机固定项 done/note 丢失。这里从原 days 把 daily/固定项原样带回，避免再次丢失。 */
+      Object.keys(days).sort().forEach(function(d){
+        var fixed=(days[d].todos||[]).filter(function(t){ return t && (t.daily || ['9001','9002','9003'].indexOf(String(t.id))>=0); });
+        nd[d]={todos:fixed, scratch:(days[d]&&days[d].scratch)||''};
+      });
       Object.keys(g).forEach(function(k){
         var p=g[k], t=JSON.parse(JSON.stringify(p.proto));
         delete t._fwd; delete t._fwdUser; delete t._doneHere; delete t._srcDay;
@@ -5133,7 +5138,61 @@ let days = loadDays();
         if(t && !t.daily && t.done!==true && t.doneDate){ delete t.doneDate; }
       });
     });
-    localStorage.setItem('wb_days_v86b','1');
+    /* 一次性还原：v87 的重建把固定项整类漏掉，导致本机 9001/9002 的勾选与备注丢失。
+       用云端最后一份带勾选备注的备份回灌；仅覆盖"本机仍为空白"的固定项，
+       不覆盖你之后新勾选或新写的备注。9003 在云端全为未勾选空白，故不在还原表内。 */
+    var FIXED_TPL={
+      '9001':{contact:'安棋', text:'【视频】16:00 审核达人短视频视频', owner:'me'},
+      '9002':{contact:'安棋', text:'【名单】17:00 筛选达人短视频名单', owner:'me'},
+      '9003':{contact:'小红书', text:'添加小红书直播博主微信', owner:'me'}
+    };
+    var FIXED_RESTORE={
+      "2026-08-17":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-18":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-19":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-20":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-21":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-24":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-25":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-26":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-27":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-28":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-08-31":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-09-01":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-09-02":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-09-03":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-09-04":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-09-07":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-09-08":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-09-09":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}},
+      "2026-09-10":{"9001":{"d":1,"n":"已审核1位"},"9002":{"d":1,"n":""}}
+    };
+    Object.keys(FIXED_RESTORE).forEach(function(d){
+      if(!days[d]) days[d]={todos:[],scratch:''};
+      Object.keys(FIXED_RESTORE[d]).forEach(function(id){
+        var st=FIXED_RESTORE[d][id];
+        var ex=days[d].todos.find(function(t){ return _sameId(t.id,id) && t.daily; });
+        if(!ex){
+          var tp=FIXED_TPL[id]||{contact:'',text:'',owner:'me'};
+          ex=Object.assign({}, tp, {id:Number(id), done:false, daily:true, att:[]});
+          days[d].todos.push(ex);
+        }
+        /* 仅当本机该项仍为空白(未勾选且无备注)才用备份回灌，避免覆盖你事后新做的操作 */
+        if(ex.done!==true && !(ex.note&&String(ex.note).trim())){
+          ex.done=!!st.d;
+          if(st.n) ex.note=st.n;
+        }
+      });
+    });
+    /* 删除早于 2026-08-28 的 9003：from 规则只挡"新增"、不删"已存的越界旧记录"，
+       v87 之前已在 8.17/8.18 等早期日期误存了 9003，这里一次性清掉。 */
+    Object.keys(days).forEach(function(d){
+      if(d < '2026-08-28'){
+        var day=days[d]; if(!day||!day.todos) return;
+        day.todos=day.todos.filter(function(t){ return String(t.id)!=='9003'; });
+      }
+    });
+    localStorage.setItem('wb_days_v86c','1');
   }catch(e){}
 })();
 saveDays(); // 将纠偏(周一还原)与周二/周三生成结果立即持久化，避免下次打开又重来
