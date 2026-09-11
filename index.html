@@ -1372,7 +1372,7 @@ window.addEventListener('error', function(e){
    · _doneDate       -> done=true + doneAt（doneAt 仅展示用，不参与判定）
    · done        -> done（每条 todo 只有一个 owner，完成就是完成，不再分两套字段）
    · doneAt      -> 丢弃（doneAt 已含）
-   · 陈旧 _fwd 投影副本（非 _fwdUser 用户核对项）-> 清除，绝不落库
+   · 陈旧 _fwd 投影副本 -> 清除，绝不落库
    · 残留历史字段 _dailyFixed / _boardRemoved / _t / _srcDay -> 丢弃
    · 两个历史漏标完成（来自逐日核对的 Excel 结论，幂等）补回 done=true
    · 解除 9001 的种子抑制（用户曾删过，现要回每日固定项）
@@ -5280,11 +5280,6 @@ window.addEventListener('beforeunload', function(e){
 const _MONDAY = mondayOf(todayStr);
 if(days[_MONDAY] && days[_MONDAY].todos.length) currentDate = _MONDAY;
 
-/* 收集所有早于 dt 的天里未完成的对方待办（自动顺延到当天显示） */
-function getForwardedThemTodos(dt){
-  /* v86：对方待办与我方走同一条顺延规则（computeForwarded 已统一处理 owner）。 */
-  return [];
-}
 /* 在全部天数中按 id 查找一条 todo（用于顺延条目的操作回写原始数据） */
 /* v74 修复：id 可能是字符串（从 Excel 重建的 269 条）也可能是数字（网页手建的 19 条），
    旧代码用 === 严格比较 → "9001" !== 9001 → 找不到 → 弹出「未找到该待办」，勾选/计时全部失效。
@@ -5301,7 +5296,7 @@ function findTodoAnywhere(id){
    findTodoAnywhere 只回「第一份」，导致 删除/勾选/编辑/备注 只作用一份、其他天副本不动 →
    原始未完成仍在更早天 → 一翻页又被顺延回来（"刚删除又回来了 / 后面几天都有重复"）。
    这里遍历「所有天 + 当前天」的同 id 副本，对每份调用 cb(t, date)。返回处理条数。
-   注意：只操作持久化在 days 里的数据；getForwardedThemTodos 的运行时顺延副本由 _deleted 跳过。 */
+   注意：只操作持久化在 days 里的数据。 */
 function forEachTodoDup(id, cb){
   /* v86：一条待办只存一份（创建日），只可能命中一次。 */
   var keys=Object.keys(days).sort();
@@ -5316,12 +5311,9 @@ function forEachTodoDup(id, cb){
 
 function renderTodoList(){
   const wrap=document.getElementById('todoWrap');
-  const fwdMe=computeForwarded(currentDate);                 /* v47：我方未完成项的顺延（纯派生） */
-  const fwdThem=getForwardedThemTodos(currentDate);
-  /* v67：同一 id 只留一条。存储里若残留陈年 _fwd 副本，会与 fwdMe 派生投影撞车显示两条；
-     concat 顺序为 todos 优先，故保留存储那条（它带 _fwd:true，仍会显示「↳ 顺延」）。 */
-  const _seenOnce={};
-  const allTodos=[].concat(todos,fwdMe,fwdThem).filter(t=>!t._deleted).filter(function(t){
+  const fwdMe=computeForwarded(currentDate);   /* 顺延 = 纯派生：更早那天创建、到今天还没结束的待办 */
+  const _seenOnce={};                          /* 同一 id 只显示一次 */
+  const allTodos=[].concat(todos,fwdMe).filter(t=>!t._deleted).filter(function(t){
     const k=String(t.id); if(_seenOnce[k]) return false; _seenOnce[k]=1; return true;
   });
   const total=allTodos.length;
@@ -5329,7 +5321,6 @@ function renderTodoList(){
   /* v70：把「本日记录 / 顺延 / 合计 / 我方 / 对方」五个口径拆开显示。
      此前只有"共 N 条"，用户拿自己记录的条数去比，比的其实是"合计"（含顺延），
      天然对不上，无法判断到底是记录丢了还是顺延多了。拆开后逐日可精确核对。 */
-  /* v72：顺延数同时认 _fwd 与 _fwdUser（你在核对表里手工标注的） */
   const fwdCnt=allTodos.filter(t=>t._fwd).length;
   const storedCnt=allTodos.filter(t=>!t._fwd).length;
   const themCnt=allTodos.filter(t=>t.owner==='them').length;
@@ -5782,7 +5773,7 @@ function openFilePick(id){ pendingAttId=id; document.getElementById('filePick').
 
 function setOwner(id,val){ flushListEdit(id); var r=findTodoAnywhere(id); if(!r) return; const t=r.t; t.owner=val; listEditId=null; if(r.day!==currentDate){ saveDays(); } else { saveTodos(); } renderTodoList(); }
 /* v59：toggleTodoDone 走"固化当天"逻辑（与 toggleTodo 同哲学）。
-   原版只翻转 done 后 saveDays——结果「对方完成的」派生 _fwd 副本在 getForwardedThemTodos 里被
+   原版只翻转 done 后 saveDays——结果「对方完成的」派生 _fwd 副本在顺延派生里被
    !t.done 过滤掉、且当天 day.todos 没有真实固化项 → 对方完成的项在 UI 上凭空消失。
    修复：参考 toggleTodo，hasReal=false 时把完成态固化到当天 day.todos（_doneHere:true），让用户看到
    「灰色+删除线」而不消失；hasReal=true 时只翻转所有副本的 done。 */
