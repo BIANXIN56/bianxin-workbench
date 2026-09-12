@@ -1457,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v100</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v101</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -2986,7 +2986,11 @@ function currentDashMonth(){
   return now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
 }
 
-/* 按真实月份日历生成周次（周一→周日，覆盖整月；首周若 1 号不是周一则为不完整周） */
+/* 按真实月份日历生成周次（周一→周日，覆盖整月；首周若 1 号不是周一则为不完整周）
+   v101 边界规则（修复「8 月多出一个第 6 周 (08.31-09.06)」）：
+   跨月的「月末那一周」若本月只剩 1 天（即本月最后一天恰为周一），该周归下月所有
+   —— 下月第 1 周就是它（含下月 1 号），本月不再重复出现，避免同一周在两个月里各显示一次。
+   本月在该周仍占 2 天及以上的跨月周保留在本月，避免月末 2~3 天无处填写。 */
 function genWeeks(ym){
   var parts = ym.split('-'); var y=+parts[0], m=+parts[1];
   // 周例会按「周一→周日」切分：取包含 1 号的那一周的周一（可能落在上一月，标准日历周）
@@ -2996,6 +3000,13 @@ function genWeeks(ym){
   var weeks = [], wk = 0, d = new Date(monday);
   while(d.getMonth() <= m-1){ // 周一阵营仍在当前月或之前都生成；越过本月即停止
     var s = new Date(d), e = new Date(d); e.setDate(e.getDate()+6);
+    // 本周内落在本月的天数（跨年判断同时看年份）
+    var inMonth = 0;
+    for(var k=0;k<7;k++){
+      var dd = new Date(d); dd.setDate(dd.getDate()+k);
+      if(dd.getFullYear()===y && dd.getMonth()===m-1) inMonth++;
+    }
+    if(e.getMonth() !== m-1 && inMonth <= 1) break; // 跨月且本月仅剩 1 天 → 归下月，不在本月重复
     var sM=String(s.getMonth()+1).padStart(2,'0'), sD=String(s.getDate()).padStart(2,'0');
     var eM=String(e.getMonth()+1).padStart(2,'0'), eD=String(e.getDate()).padStart(2,'0');
     wk++;
@@ -3298,6 +3309,8 @@ function getDashData(ym){
   migrateV80(dashData[ym], ym);
   // v96 一次性迁移（幂等）：① 顶层商品卡板并入抖音子板块 ② 周例会按真实月份周次生成
   migrateV96ProductcardToSubboard(dashData[ym], ym);
+  // v101（幂等）：清掉并入时按 id 去重漏掉的旧模块（商品卡进度重复渲染两遍）
+  migrateV101DedupeLegacyBlocks(dashData[ym]);
   migrateV96WeeklyRealMonth(dashData[ym], ym);
   // v97（幂等，每次校验）：统一金额模型 + 加性模板同步（补上新增的指标卡 / 模块 / 子板块）
   migrateV97(dashData[ym], ym);
@@ -3381,13 +3394,50 @@ function migrateV96ProductcardToSubboard(D, ym){
     // 顶层商品卡板里的自定义模块补进子板块（去重，避免丢失用户加的备注等）
     if(sub){
       var have={}; sub.blocks.forEach(function(b){ have[b.id]=true; });
+      // v101：旧顶层板用的 id 是 productcard-cards/-gsv-input/-cost-input，子板块模板用的是 pc-cards/-gsv-input/-cost-input，
+      // 仅按 id 去重会把同一功能的模块搬两遍（页面出现「商品卡进度」两遍）→ 先做「新旧别名」映射去重。
+      var LEGACY_ALIAS = { 'productcard-cards':'pc-cards', 'productcard-gsv-input':'pc-gsv-input', 'productcard-cost-input':'pc-cost-input' };
       (D.dashboard.boards[topIdx].blocks||[]).forEach(function(b){
+        var alias = LEGACY_ALIAS[b.id];
+        if(alias && have[alias]) return;              // 新命名的同功能模块已在 → 旧模块不再搬
         if(!have[b.id]){ sub.blocks.push(b); have[b.id]=true; }
       });
     }
   }
   D.dashboard.boards.splice(topIdx,1); // 删除顶层商品卡板
   saveDash();
+}
+
+/* v101（幂等）：清掉「商品卡进度」重复渲染的第二套模块。
+   根因：v96 把旧顶层商品卡板并入抖音子板块时按 block.id 去重，而旧板模块 id 是
+        productcard-cards / productcard-gsv-input / productcard-cost-input，
+        新子板块模板用的是 pc-cards / pc-gsv-input / pc-cost-input —— id 不同 → 两套都留下了，
+        于是同一个「🛒 商品卡进度」在页面上渲染两遍（第二遍是旧版静态目标卡 "XXXX 月目标（固定）"）。
+   处理：子板块里新旧两套并存时，删除旧的 productcard-* 三个模块，并写 _gone.blocks 墓碑防复现。
+        数值全部在 D.productcard 里，删模块不动数据，无丢失风险。 */
+function migrateV101DedupeLegacyBlocks(D){
+  if(!D || !D.dashboard || !Array.isArray(D.dashboard.boards)) return;
+  var LEGACY = { 'productcard-cards':'pc-cards', 'productcard-gsv-input':'pc-gsv-input', 'productcard-cost-input':'pc-cost-input' };
+  if(!D._gone) D._gone = { boards:[], subs:[], blocks:[], cards:[] };
+  var changed = false;
+  function cleanSub(sub){
+    if(!sub || !Array.isArray(sub.blocks)) return;
+    var ids = {}; sub.blocks.forEach(function(b){ if(b) ids[b.id] = true; });
+    sub.blocks = sub.blocks.filter(function(b){
+      if(!b) return false;
+      var newer = LEGACY[b.id];
+      if(newer && ids[newer]){                                  // 新旧并存 → 删旧的那一套
+        if(D._gone.blocks.indexOf(b.id) < 0) D._gone.blocks.push(b.id);
+        changed = true; return false;
+      }
+      return true;
+    });
+  }
+  D.dashboard.boards.forEach(function(b){
+    cleanSub(b);
+    (b.subboards || []).forEach(cleanSub);
+  });
+  if(changed) saveDash();
 }
 
 // v96：周例会严格按「真实月份日历、周一→周日」生成周次，修复 9 月仍显示 8 月周的问题。
@@ -3402,15 +3452,19 @@ function migrateV96WeeklyRealMonth(D, ym){
     return (w.dateRange||'') === (fresh[i].dateRange||'');
   });
   if(sameShape) return; // 已属本月份真实周次，无需处理
-  // 形状不符（旧月份残留 / 份数不同）→ 按真实月份重建，并尽力按 index 保留已填数值
-  if(D.weekly.length === fresh.length){
-    fresh.forEach(function(w,i){
-      var old = D.weekly[i]; if(old){
-        w.inviteDone = old.inviteDone||0; w.linkDone = old.linkDone||0;
-        w.publishDone = old.publishDone||0; w.publishTarget = old.publishTarget||''; w.note = old.note||'';
-      }
-    });
-  }
+  /* 形状不符（旧月份残留 / 份数不同，如 v101 后 8 月由 6 周变 5 周）→ 按真实月份重建。
+     v101：数值保留改为「先按 dateRange 精确对齐」——跨界周被移走时不会把后面的周数值整体错位；
+     找不到同日期段时才退回按下标对齐。 */
+  var olds = D.weekly.slice();
+  var byRange = {};
+  olds.forEach(function(w){ if(w && w.dateRange && byRange[w.dateRange] === undefined) byRange[w.dateRange] = w; });
+  var sameLen = (olds.length === fresh.length);
+  fresh.forEach(function(w,i){
+    var old = byRange[w.dateRange] || (sameLen ? olds[i] : null);
+    if(!old) return;
+    w.inviteDone = old.inviteDone||0; w.linkDone = old.linkDone||0;
+    w.publishDone = old.publishDone||0; w.publishTarget = old.publishTarget||''; w.note = old.note||'';
+  });
   D.weekly = fresh; saveDash();
 }
 
@@ -4779,15 +4833,21 @@ function liveMetric(source, field, val){
   refreshInputResults(D, source);
 }
 /* 目标值输入框以「万」为单位显示/输入（用户直觉是 3 = 3万）。
-   落库前把输入框的「万字面数字」×10000 转成「元」，与 completionTarget 语义对齐，
-   彻底杜绝再次被存成字面小数字（如 3→¥3）的污染。 */
+   落库前把输入框的值转成「元」，与 completionTarget 语义对齐，彻底杜绝再被存成字面小数字（如 3→¥3）。
+   兼容两种填法：填 3 / 4.74 → 视为「万」×10000；直接填 30000 → 视为「元」不再放大。
+   清空 → 存空串（回到未填状态）。 */
+function targetInputToYuan(val){
+  var s = String(val === null || val === undefined ? '' : val).replace(/[^0-9.]/g, '');
+  if(s === '') return '';
+  var n = parseFloat(s);
+  if(!isFinite(n) || n <= 0) return '';
+  return n >= 1000 ? Math.round(n) : Math.round(n * 10000);
+}
 function saveTargetMetric(source, field, val){
-  var wan = parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
-  saveMetric(source, field, Math.round(wan * 10000));
+  saveMetric(source, field, targetInputToYuan(val));
 }
 function liveTargetMetric(source, field, val){
-  var wan = parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
-  liveMetric(source, field, Math.round(wan * 10000));
+  liveMetric(source, field, targetInputToYuan(val));
 }
 /* 更新某 source 下所有动态/计算指标卡片（按 dynamicId 定位 DOM，避免整页重绘丢焦点） */
 function refreshDynamicCards(D, source){
