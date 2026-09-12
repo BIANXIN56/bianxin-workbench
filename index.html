@@ -1457,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v97</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v98</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -3074,9 +3074,12 @@ function defaultDashData(ym){
                 { id:'dabo-cards', type:'metric-cards', data:{ cards:[
                   { nl:'目标场次', nv:'3-5', ns:'月度目标', nvSuffix:' 场' },
                   { nl:'🎯 达播目标 GSV', dynamicId:'daboTargetGsv', dynamicField:'completionTarget', dynamicSource:'daboke', ns:'随下方「目标」修改', style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;' },
-                  { nl:'📊 实际完成 GSV', dynamicId:'daboActualGsv', dynamicField:'completionInput', dynamicSource:'daboke', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;' }
+                  { nl:'📊 实际完成 GSV', dynamicId:'daboActualGsv', dynamicField:'completionInput', dynamicSource:'daboke', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;' },
+                  { nl:'💸 消耗金额', dynamicId:'daboCostDisplay', dynamicField:'cost', dynamicSource:'daboke', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff0f0,#fff);border:2px solid #e07070;', nlStyle:'color:#c0392b;font-weight:700;', nvStyle:'color:#c0392b;font-size:26px;' },
+                  { nl:'📈 ROI', dynamicId:'daboRoiDisplay', computed:true, computeFields:['cost','completionInput'], computeSource:'daboke', computeFn:'calcRoi', ns:'GSV / 消耗', style:'background:linear-gradient(135deg,#f0f0ff,#fff);border:2px solid #7070c0;', nlStyle:'color:#5030a0;font-weight:700;', nvStyle:'color:#5030a0;font-size:26px;' }
                 ]}},
                 { id:'dabo-input', type:'input-area', data:{ label:'本月完成 GSV（元）', source:'daboke', asOfDateField:'asOfDate', inputField:'completionInput', targetField:'completionTarget', areaId:'daboCompArea', dateId:'daboAsOfDate', inputId:'daboCompInput', resultId:'daboCompResult' }},
+                { id:'dabo-cost-input', type:'input-area', data:{ label:'消耗金额（元）', source:'daboke', inputField:'cost', areaId:'daboCostArea', inputId:'daboCostInput', extraStyle:'background:linear-gradient(135deg,#fff0f0,#fff);border-color:#ff7b7b;', labelColor:'#c0392b', roiMode:true, noResult:true }},
                 { id:'dabo-note', type:'note', data:{ noteField:true, source:'daboke', noteKey:'note' } }
               ]
             },
@@ -3160,7 +3163,6 @@ function defaultDashData(ym){
       total: { label: '三渠道合计', value: '≈25.8万', sub: ym==='2026-07' ? '实际仅 0.79万' : '7月实际仅 0.79万' }
     },
     funnel: {
-      monthlyGsv: '6.32 万',
       asOfDate: '',               // 截至 X月X日 日期选择器
       completionInput: '',      // 用户手动输入 GSV（元）
       completionTarget: 63200,   // 目标 GSV（元），6.32万
@@ -3175,16 +3177,15 @@ function defaultDashData(ym){
       // 兼容旧字段（迁移用）
       targetInvite: 2200, targetLink: 800, targetSample: 200, targetPublish: 43,
       actInvite: isAug?231:0, actLink: isAug?86:0, actSample: isAug?120:0, actPublish: isAug?40:6,
-      actGsv: isAug?'6.32 万':'',
       julTargetInvite: 1000, julTargetLink: 450, julTargetSample: 150, julTargetPublish: 25,
       julInvite: 1495, julLink: 773, julSample: 41, julPublish: 6, julOrder: 0, julReinvest: 0
     },
     daboke: {
-      monthlyGsv: '',
       actualInput: '',          // 手动填写实际完成（兼容旧字段）
       targetSessions: '3-5',
       completionTarget: 47400,   // 目标 GSV（元），4.74万 —— 目标卡 / 「/ 目标」/ 完成率共用同一个字段
       completionInput: '',       // 用户手动输入实际 GSV（元）
+      cost: '',                  // 消耗金额（元，用户填）— 与达短/商品卡/天猫同一套指标
       asOfDate: '',             // 截至日期
       actualSessions: isAug?'0':'0',
       note: '坑位费达人：67岁生宝宝（天赐一家人）ID:tianci20521，坑位费6万+投流。其他：金鑫（只挂橱窗未播）、天猫美宣（超期未播）。'
