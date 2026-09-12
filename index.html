@@ -1457,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v94</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v95</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -1746,7 +1746,8 @@ function statusOf(it){
 /* --- 今日置顶 --- */
 function renderToday(){
   const list = document.getElementById('todayList');
-  const open = items.filter(it=>!it.done);
+  /* v95：过滤 _autoItem 占位条目（loose 项目 ✓完成 触发的最小 item 占位，无 owner/due，不应出现在今日列表） */
+  const open = items.filter(it=>!it.done && !it._autoItem);
   const pri = {"已逾期":0,"今日到期":1,"即将到期":2};
   open.sort((a,b)=>{ const sa=pri[statusOf(a)]??9, sb=pri[statusOf(b)]??9; return sa-sb; });
   const show = open.filter(it=>{ const st=statusOf(it); return st==="已逾期"||st==="今日到期"||st==="即将到期"; });
@@ -2692,16 +2693,29 @@ function editProjExtraStep(projName, idx){
   refreshItems();
   toast('已修改');
 }
-/* 整个项目 done/重开（勾/取消全部 todos + 附加 steps） */
+/* 整个项目 done/重开（勾/取消全部 todos + 附加 steps）
+   v95 修：原 `if(it){... it.done=newDone; }` 对 loose 项目（只有【】标签聚合、items 数组里无对应条目）
+   `it=undefined` 直接跳过，导致 p.done 永远是 false、点 ✓完成 永远折叠不进"已完成"。
+   现在若 items 里无对应条目，就补一条最小占位 item（仅持 done 状态）——
+   aggregateByProj 的 `map[n].done=!!it.done` 自然就能取到值。占位 item 标 `_autoItem:true`
+   不出现在今日列表（renderToday 已过滤）。 */
 function toggleProjDone(projName){
   var p=aggregateByProj().find(function(x){return x.name===projName;});
   if(!p){ toast('未找到项目'); return; }
   var newDone=!p.isDone;
   /* 勾/取消所有 todos */
   p.todos.forEach(function(s){ s.t.done=newDone; });
-  /* 勾/取消所有附加 steps */
+  /* 找到 item；没有就补占位（loose 项目首次 ✓完成 触发） */
   var it=items.find(function(x){return x.title===projName;});
-  if(it){ ensureSteps(it); it.steps.forEach(function(s){s.done=newDone;}); it.next=it.steps.map(function(x){return (x.done?'✓ ':'')+(x.who?('['+x.who+'] '):'')+(x.due?('('+x.due+') '):'')+x.text;}).join(' → '); it.done=newDone; }
+  if(!it){
+    it={title:projName, steps:[], next:'', done:newDone, _autoItem:true};
+    items.push(it);
+  }else{
+    ensureSteps(it);
+    it.steps.forEach(function(s){s.done=newDone;});
+    it.next=it.steps.map(function(x){return (x.done?'✓ ':'')+(x.who?('['+x.who+'] '):'')+(x.due?('('+x.due+') '):'')+x.text;}).join(' → ');
+    it.done=newDone;
+  }
   saveDays(); saveItems();
   refreshItems();
   toast(newDone?'已标记整个项目完成 ✓':'已重开');
