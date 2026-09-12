@@ -1455,7 +1455,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v91</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v92</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -1797,6 +1797,11 @@ function projNumTokens(name){
   if(m) s=s.replace(m,'');
   return (s.match(/\d+/g)||[]);
 }
+/* 去掉末尾的"编号"后缀（-18条 / -22条 / -3个 等），用于识别"同一事件的编号变体"。
+   如"7月商品卡裂变视频-18条"与"-22条"去掉后缀都是"7月商品卡裂变视频" → 视为不同进度的小项，不合并（诉求D：分开）。 */
+function stripNumSuffix(name){
+  return String(name||'').replace(/[-_－—–\s]?\d+(条|个|批|篇|次|位)?$/,'');
+}
 /* 项目名 token：中文 bigram + 拉丁词 + 数字编号（去月份），供相似度比较 */
 function projNameTokens(name){
   var s=String(name||'');
@@ -1827,6 +1832,8 @@ function projNamesShouldMerge(nameA, nameB){
   if(!nameA || !nameB || nameA===nameB) return false;
   var mA = extractMonth(nameA), mB = extractMonth(nameB);
   if(mA && mB && mA!==mB) return false; /* 不同月份，绝不合并 */
+  /* 编号变体（如 -18条 / -22条）：去掉后缀后相同但不是同一名字 → 视为不同进度的小项，不合并（诉求D：分开） */
+  if(stripNumSuffix(nameA)===stripNumSuffix(nameB) && nameA!==nameB) return false;
   var A=projNameTokens(nameA), B=projNameTokens(nameB);
   /* ② 编号硬门槛：都有编号却完全不相交 → 不合并 */
   if(A.digits.length && B.digits.length){
