@@ -1457,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v96</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v97</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -3057,10 +3057,10 @@ function defaultDashData(ym){
               id: 'dy-short', title: '🎬 达人短视频 · 漏斗全景',
               blocks: [
                 { id:'dy-target', type:'metric-cards', data:{ cards:[
-                  { nl:'🎯 达短目标 GSV', nv:(63200/10000).toFixed(2)+' 万', ns:ym+' 月目标（固定）', style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;' },
-                  { nl:'📊 实际完成 GSV', nv:'--', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;', dynamicId:'funnelActualGsv', dynamicField:'completionInput', dynamicSource:'funnel', moneyWan:true },
-                  { nl:'💸 消耗金额', nv:'--', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff0f0,#fff);border:2px solid #e07070;', nlStyle:'color:#c0392b;font-weight:700;', nvStyle:'color:#c0392b;font-size:26px;', dynamicId:'funnelCostDisplay', dynamicField:'cost', dynamicSource:'funnel', prefix:'¥', numberFormat:true },
-                  { nl:'📈 ROI', nv:'--', ns:'GSV / 消耗', style:'background:linear-gradient(135deg,#f0f0ff,#fff);border:2px solid #7070c0;', nlStyle:'color:#5030a0;font-weight:700;', nvStyle:'color:#5030a0;font-size:26px;', computed:true, computeFields:['cost','completionInput'], computeSource:'funnel', computeFn:'calcRoi', dynamicId:'funnelRoiDisplay' }
+                  { nl:'🎯 达短目标 GSV', dynamicId:'funnelTargetGsv', dynamicField:'completionTarget', dynamicSource:'funnel', ns:'随下方「目标」修改', style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;' },
+                  { nl:'📊 实际完成 GSV', dynamicId:'funnelActualGsv', dynamicField:'completionInput', dynamicSource:'funnel', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;' },
+                  { nl:'💸 消耗金额', dynamicId:'funnelCostDisplay', dynamicField:'cost', dynamicSource:'funnel', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff0f0,#fff);border:2px solid #e07070;', nlStyle:'color:#c0392b;font-weight:700;', nvStyle:'color:#c0392b;font-size:26px;' },
+                  { nl:'📈 ROI', dynamicId:'funnelRoiDisplay', computed:true, computeFields:['cost','completionInput'], computeSource:'funnel', computeFn:'calcRoi', ns:'GSV / 消耗', style:'background:linear-gradient(135deg,#f0f0ff,#fff);border:2px solid #7070c0;', nlStyle:'color:#5030a0;font-weight:700;', nvStyle:'color:#5030a0;font-size:26px;' }
                 ]}},
                 { id:'dy-input', type:'input-area', data:{ label:'本月 GSV（元）', source:'funnel', asOfDateField:'asOfDate', inputField:'completionInput', targetField:'completionTarget', areaId:'compArea', dateId:'compAsOfDate', inputId:'compInput', resultId:'compResult' }},
                 { id:'dy-cost-input', type:'input-area', data:{ label:'消耗金额（元）', source:'funnel', inputField:'cost', areaId:'funnelCostArea', inputId:'funnelCostInput', extraStyle:'background:linear-gradient(135deg,#fff0f0,#fff);border-color:#ff7b7b;', labelColor:'#c0392b', roiMode:true, noResult:true }},
@@ -3073,8 +3073,8 @@ function defaultDashData(ym){
               blocks: [
                 { id:'dabo-cards', type:'metric-cards', data:{ cards:[
                   { nl:'目标场次', nv:'3-5', ns:'月度目标', nvSuffix:' 场' },
-                  { nl:'🎯 达播目标 GSV', nv:'4.74', ns:ym+' 月目标（固定）', style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;', nvSuffix:' 万' },
-                  { nl:'📊 实际完成 GSV', nv:'--', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;', dynamicId:'daboActualGsv', dynamicField:'completionInput', dynamicSource:'daboke', moneyWan:true }
+                  { nl:'🎯 达播目标 GSV', dynamicId:'daboTargetGsv', dynamicField:'completionTarget', dynamicSource:'daboke', ns:'随下方「目标」修改', style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;' },
+                  { nl:'📊 实际完成 GSV', dynamicId:'daboActualGsv', dynamicField:'completionInput', dynamicSource:'daboke', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;' }
                 ]}},
                 { id:'dabo-input', type:'input-area', data:{ label:'本月完成 GSV（元）', source:'daboke', asOfDateField:'asOfDate', inputField:'completionInput', targetField:'completionTarget', areaId:'daboCompArea', dateId:'daboAsOfDate', inputId:'daboCompInput', resultId:'daboCompResult' }},
                 { id:'dabo-note', type:'note', data:{ noteField:true, source:'daboke', noteKey:'note' } }
@@ -3084,12 +3084,12 @@ function defaultDashData(ym){
               id: 'dy-productcard', title: '🛒 商品卡进度',
               blocks: [
                 { id:'pc-cards', type:'metric-cards', data:{ cards:[
-                  { nl:'🎯 商品卡目标 GSV', nv:Number(47400).toLocaleString('en-US'), ns:ym+' 月目标（固定）', prefix:'¥', numberFormat:true, style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;' },
-                  { nl:'📊 实际完成 GSV', nv:'--', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;', dynamicId:'productcardActualGsv', dynamicField:'completionInput', dynamicSource:'productcard', moneyWan:true },
-                  { nl:'💸 消耗金额', nv:'--', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff0f0,#fff);border:2px solid #e07070;', nlStyle:'color:#c0392b;font-weight:700;', nvStyle:'color:#c0392b;font-size:26px;', dynamicId:'productcardCostDisplay', dynamicField:'cost', dynamicSource:'productcard', prefix:'¥', numberFormat:true },
-                  { nl:'📈 ROI', nv:'--', ns:'GSV / 消耗', style:'background:linear-gradient(135deg,#f0f0ff,#fff);border:2px solid #7070c0;', nlStyle:'color:#5030a0;font-weight:700;', nvStyle:'color:#5030a0;font-size:26px;', computed:true, computeFields:['cost','completionInput'], computeSource:'productcard', computeFn:'calcRoi', dynamicId:'productcardRoiDisplay' }
+                  { nl:'🎯 商品卡目标 GSV', dynamicId:'productcardTargetGsv', dynamicField:'completionTarget', dynamicSource:'productcard', ns:'随下方「目标」修改', style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;' },
+                  { nl:'📊 实际完成 GSV', dynamicId:'productcardActualGsv', dynamicField:'completionInput', dynamicSource:'productcard', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;' },
+                  { nl:'💸 消耗金额', dynamicId:'productcardCostDisplay', dynamicField:'cost', dynamicSource:'productcard', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff0f0,#fff);border:2px solid #e07070;', nlStyle:'color:#c0392b;font-weight:700;', nvStyle:'color:#c0392b;font-size:26px;' },
+                  { nl:'📈 ROI', dynamicId:'productcardRoiDisplay', computed:true, computeFields:['cost','completionInput'], computeSource:'productcard', computeFn:'calcRoi', ns:'GSV / 消耗', style:'background:linear-gradient(135deg,#f0f0ff,#fff);border:2px solid #7070c0;', nlStyle:'color:#5030a0;font-weight:700;', nvStyle:'color:#5030a0;font-size:26px;' }
                 ]}},
-                { id:'pc-gsv-input', type:'input-area', data:{ label:'本月 GSV（元）', source:'productcard', asOfDateField:'asOfDate', inputField:'completionInput', targetField:'targetGsvYuan', areaId:'productcardCompArea', dateId:'productcardAsOfDate', inputId:'productcardCompInput', resultId:'productcardCompResult' }},
+                { id:'pc-gsv-input', type:'input-area', data:{ label:'本月 GSV（元）', source:'productcard', asOfDateField:'asOfDate', inputField:'completionInput', targetField:'completionTarget', areaId:'productcardCompArea', dateId:'productcardAsOfDate', inputId:'productcardCompInput', resultId:'productcardCompResult' }},
                 { id:'pc-cost-input', type:'input-area', data:{ label:'消耗金额（元）', source:'productcard', inputField:'cost', areaId:'productcardCostArea', inputId:'productcardCostInput', extraStyle:'background:linear-gradient(135deg,#fff0f0,#fff);border-color:#ff7b7b;', labelColor:'#c0392b', roiMode:true, noResult:true }}
               ]
             }
@@ -3101,12 +3101,12 @@ function defaultDashData(ym){
           order: 3, visible: true,
           blocks: [
             { id:'tmall-cards', type:'metric-cards', data:{ cards:[
-              { nl:'🎯 天猫目标 GSV', nv:Number(20000).toLocaleString('en-US'), ns:ym+' 月目标（固定）', prefix:'¥', numberFormat:true, style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;' },
-              { nl:'📊 实际完成 GSV', nv:'--', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;', dynamicId:'tmallActualGsv', dynamicField:'completionInput', dynamicSource:'tmall', moneyWan:true },
-              { nl:'💸 消耗金额', nv:'--', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff0f0,#fff);border:2px solid #e07070;', nlStyle:'color:#c0392b;font-weight:700;', nvStyle:'color:#c0392b;font-size:26px;', dynamicId:'tmallCostDisplay', dynamicField:'cost', dynamicSource:'tmall', prefix:'¥', numberFormat:true },
-              { nl:'📈 ROI', nv:'--', ns:'GSV / 消耗', style:'background:linear-gradient(135deg,#f0f0ff,#fff);border:2px solid #7070c0;', nlStyle:'color:#5030a0;font-weight:700;', nvStyle:'color:#5030a0;font-size:26px;', computed:true, computeFields:['cost','completionInput'], computeSource:'tmall', computeFn:'calcRoi', dynamicId:'tmallRoiDisplay' }
+              { nl:'🎯 天猫目标 GSV', dynamicId:'tmallTargetGsv', dynamicField:'completionTarget', dynamicSource:'tmall', ns:'随下方「目标」修改', style:'background:linear-gradient(135deg,#eaf1ff,#fff);border:2px solid var(--brand);', nlStyle:'color:var(--brand);font-weight:700;', nvStyle:'color:var(--brand);font-size:26px;' },
+              { nl:'📊 实际完成 GSV', dynamicId:'tmallActualGsv', dynamicField:'completionInput', dynamicSource:'tmall', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff5e6,#fff);border:2px solid #f0a030;', nlStyle:'color:#c07020;font-weight:700;', nvStyle:'color:#c07020;font-size:26px;' },
+              { nl:'💸 消耗金额', dynamicId:'tmallCostDisplay', dynamicField:'cost', dynamicSource:'tmall', ns:'随下方输入更新', style:'background:linear-gradient(135deg,#fff0f0,#fff);border:2px solid #e07070;', nlStyle:'color:#c0392b;font-weight:700;', nvStyle:'color:#c0392b;font-size:26px;' },
+              { nl:'📈 ROI', dynamicId:'tmallRoiDisplay', computed:true, computeFields:['cost','completionInput'], computeSource:'tmall', computeFn:'calcRoi', ns:'GSV / 消耗', style:'background:linear-gradient(135deg,#f0f0ff,#fff);border:2px solid #7070c0;', nlStyle:'color:#5030a0;font-weight:700;', nvStyle:'color:#5030a0;font-size:26px;' }
             ]}},
-            { id:'tmall-gsv-input', type:'input-area', data:{ label:'本月 GSV（元）', source:'tmall', asOfDateField:'asOfDate', inputField:'completionInput', targetField:'targetGsvYuan', areaId:'tmallCompArea', dateId:'tmallAsOfDate', inputId:'tmallCompInput', resultId:'tmallCompResult' }},
+            { id:'tmall-gsv-input', type:'input-area', data:{ label:'本月 GSV（元）', source:'tmall', asOfDateField:'asOfDate', inputField:'completionInput', targetField:'completionTarget', areaId:'tmallCompArea', dateId:'tmallAsOfDate', inputId:'tmallCompInput', resultId:'tmallCompResult' }},
             /* 用户要求：消耗金额输入行保留（可录入消耗），但删掉该行红色显示的"ROI：1.00"。
                ROI 改为只由顶部紫色"📈 ROI"卡片展示。roiMode:true 让 label 为 💸、走 ROI 分支；
                noResult:true 让 renderInputArea 不再渲染行内红色 ROI 结果（见 renderInputArea）。 */
@@ -3183,10 +3183,8 @@ function defaultDashData(ym){
       monthlyGsv: '',
       actualInput: '',          // 手动填写实际完成（兼容旧字段）
       targetSessions: '3-5',
-      targetGsv: '4.74',
-      targetGsvYuan: 47400,     // 目标 GSV（元），4.74万
+      completionTarget: 47400,   // 目标 GSV（元），4.74万 —— 目标卡 / 「/ 目标」/ 完成率共用同一个字段
       completionInput: '',       // 用户手动输入实际 GSV（元）
-      completionTarget: 47400,   // 目标 GSV（元）
       asOfDate: '',             // 截至日期
       actualSessions: isAug?'0':'0',
       note: '坑位费达人：67岁生宝宝（天赐一家人）ID:tianci20521，坑位费6万+投流。其他：金鑫（只挂橱窗未播）、天猫美宣（超期未播）。'
@@ -3197,13 +3195,13 @@ function defaultDashData(ym){
       gsvSub: '消耗 ¥7889', roiSub: '偏低 · 需优化'
     },
     tmall: {
-      targetGsvYuan: 20000,    // 目标 GSV（元），2万
+      completionTarget: 20000, // 目标 GSV（元），2万 —— 全站统一字段名
       completionInput: '',       // 实际完成 GSV（元，用户填）
       asOfDate: '',             // 截至日期
       cost: ''                  // 消耗金额（元，用户填）
     },
     productcard: {
-      targetGsvYuan: 47400,    // 目标 GSV（元），4.74万（自营商品卡）
+      completionTarget: 47400, // 目标 GSV（元），4.74万（自营商品卡）—— 全站统一字段名
       completionInput: '',       // 实际完成 GSV（元，用户填）
       asOfDate: '',             // 截至日期
       cost: ''                  // 消耗金额（元，用户填）
@@ -3307,6 +3305,8 @@ function getDashData(ym){
   // v96 一次性迁移（幂等）：① 顶层商品卡板并入抖音子板块 ② 周例会按真实月份周次生成
   migrateV96ProductcardToSubboard(dashData[ym], ym);
   migrateV96WeeklyRealMonth(dashData[ym], ym);
+  // v97（幂等，每次校验）：统一金额模型 + 加性模板同步（补上新增的指标卡 / 模块 / 子板块）
+  migrateV97(dashData[ym], ym);
   return dashData[ym];
 }
 // 旧版本字段一次性迁移（幂等：仅修正旧值，不触碰用户已删除的内容）
@@ -3338,10 +3338,10 @@ function migrateFunnelFields(D, ym){
 function migrateV80(D, ym){
   var changed=false;
   if(!D.productcard || typeof D.productcard!=='object'){
-    D.productcard = { targetGsvYuan:47400, completionInput:'', asOfDate:'', cost:'' }; changed=true;
+    D.productcard = { completionTarget:47400, completionInput:'', asOfDate:'', cost:'' }; changed=true;
   } else {
-    ['targetGsvYuan','completionInput','asOfDate','cost'].forEach(function(k){
-      if(typeof D.productcard[k]==='undefined'){ D.productcard[k] = (k==='targetGsvYuan'?47400:''); changed=true; }
+    ['completionTarget','completionInput','asOfDate','cost'].forEach(function(k){
+      if(typeof D.productcard[k]==='undefined'){ D.productcard[k] = (k==='completionTarget'?47400:''); changed=true; }
     });
   }
   if(D.dashboard && Array.isArray(D.dashboard.boards)){
@@ -3418,6 +3418,167 @@ function migrateV96WeeklyRealMonth(D, ym){
   D.weekly = fresh; saveDash();
 }
 
+/* v97：统一金额模型 + 加性模板同步（一次写对，之后不再逐条打补丁）
+   ① 目标 GSV 的源字段统一为 D[src].completionTarget（元 · 数值）
+   ② 所有金额卡清掉历史标记（moneyWan/prefix/nvSuffix/numberFormat），写死值一律换算成「元」数值
+   ③ 汇总卡（生意大盘）的金额值同样归一到「元」数值
+   ④ 模板新增的板块 / 子板块 / 模块 / 指标卡，按模板顺序加性补进已存月份
+      —— 已存在的一律原样保留（不覆盖用户任何数据与手工修改）
+      —— 用户主动删除过的东西记在 D._gone 墓碑里，永不被模板同步复活
+   全函数幂等：没变化就不写盘。 */
+function migrateV97(D, ym){
+  var changed = false;
+  var SOURCES = ['funnel','daboke','productcard','tmall'];
+  function has(arr, v){ return arr && arr.indexOf(v) >= 0; }
+
+  /* ① 目标 GSV 源字段统一（商品卡/天猫旧字段 targetGsvYuan → completionTarget） */
+  SOURCES.forEach(function(s){
+    var o = D[s]; if(!o) return;
+    var t = o.completionTarget;
+    if(t === null || t === undefined || t === ''){
+      if(o.targetGsvYuan !== null && o.targetGsvYuan !== undefined) t = o.targetGsvYuan;
+    }
+    if(t !== null && t !== undefined && t !== ''){
+      var yuan = toYuan(t);
+      if(o.completionTarget !== yuan){ o.completionTarget = yuan; changed = true; }
+    }
+    if(o.targetGsvYuan !== undefined){ delete o.targetGsvYuan; changed = true; }
+  });
+
+  /* ②③ 金额值归一 */
+  function walkBlocks(list){
+    (list || []).forEach(function(blk){
+      if(!blk || !blk.data) return;
+      if(blk.type === 'metric-cards' && Array.isArray(blk.data.cards)){
+        blk.data.cards.forEach(function(c){
+          if(!isMoneyCard(c)) return;
+          var dirty = false;
+          ['moneyWan','prefix','nvSuffix','numberFormat','suffix'].forEach(function(k){
+            if(c[k] !== undefined){ delete c[k]; dirty = true; }
+          });
+          /* 静态金额卡（老版本写死的 "6.32 万" / "¥47,400"）→ 统一存「元」数值，显示交给 fmtMoney */
+          if(!c.dynamicId && !c.computed && !c.nvField){
+            var yuan = toYuan(c.nv);
+            if(c.nv !== yuan){ c.nv = yuan; dirty = true; }
+          }
+          if(dirty) changed = true;
+        });
+      }
+      if(blk.type === 'channel-sum'){
+        (blk.data.items || []).forEach(function(it){
+          if(!isMoneyCard({nl: it.label})) return;
+          var y = toYuan(it.value);
+          if(it.value !== y){ it.value = y; changed = true; }
+        });
+        if(blk.data.total && isMoneyCard({nl: blk.data.total.label})){
+          var ty = toYuan(blk.data.total.value);
+          if(blk.data.total.value !== ty){ blk.data.total.value = ty; changed = true; }
+        }
+      }
+    });
+  }
+  walkBlocks(D.dashboard && D.dashboard.boards ? [].concat.apply([], D.dashboard.boards.map(function(b){
+    return (b.blocks||[]).concat([].concat.apply([], (b.subboards||[]).map(function(s){ return s.blocks||[]; })));
+  })) : []);
+
+  /* ④ 加性模板同步（按模板顺序对齐；用户自建项永远保留在末尾） */
+  if(!D.dashboard || !Array.isArray(D.dashboard.boards)){ if(changed) saveDash(); return; }
+  if(!D._gone) D._gone = { boards:[], subs:[], blocks:[], cards:[] };
+  var gone = D._gone;
+  var tpl = defaultDashData(ym);
+  var tplBoards = (tpl.dashboard && tpl.dashboard.boards) || [];
+
+  function alignCards(exCards, tplCards){
+    var idx = {}; exCards.forEach(function(c,i){ if(idx[c.nl] === undefined) idx[c.nl] = i; });
+    var used = {}, out = [];
+    tplCards.forEach(function(tc){ var i = idx[tc.nl]; if(i !== undefined && !used[i]){ out.push(exCards[i]); used[i] = true; } });
+    exCards.forEach(function(c,i){ if(!used[i]) out.push(c); });
+    return out;
+  }
+  function mergeBlocks(exList, tplList){
+    exList = exList || []; tplList = tplList || [];
+    var byId = {}; exList.forEach(function(b){ if(byId[b.id] === undefined) byId[b.id] = b; });
+    var used = {}, out = [];
+    tplList.forEach(function(tb){
+      var ex = byId[tb.id];
+      if(!ex){
+        if(has(gone.blocks, tb.id)) return;                    // 用户删过 → 不复活
+        out.push(JSON.parse(JSON.stringify(tb))); changed = true; return;
+      }
+      /* 指标卡：① 加性补卡（模板新增的自动补上）② 写死值的金额卡升级为「数据驱动」
+         ③ 卡片顺序按模板对齐（目标 → 实际 → 消耗 → ROI），用户自建卡保留在后 */
+      if(tb.type === 'metric-cards' && tb.data && Array.isArray(tb.data.cards)){
+        if(!ex.data) ex.data = {};
+        if(!Array.isArray(ex.data.cards)) ex.data.cards = [];
+        var have = {}; ex.data.cards.forEach(function(c){ have[c.nl] = true; });
+        tb.data.cards.forEach(function(tc){
+          if(have[tc.nl] || has(gone.cards, tc.nl)) return;
+          ex.data.cards.push(JSON.parse(JSON.stringify(tc))); have[tc.nl] = true; changed = true;
+        });
+        /* 旧版把目标写死在卡里（"6.32 万"）→ 改为读源字段，与"/ 目标"、完成率共用同一个数。
+           若用户在卡里改过数值，先回灌到源字段再升级，保证不丢用户改动。 */
+        tb.data.cards.forEach(function(tc){
+          if(!tc.dynamicSource || !tc.dynamicField) return;
+          var cur = ex.data.cards.filter(function(x){ return x.nl === tc.nl; })[0];
+          if(!cur || cur.dynamicSource) return;
+          var cardYuan = toYuan(cur.nv);
+          var srcYuan = toYuan(D[tc.dynamicSource] ? D[tc.dynamicSource][tc.dynamicField] : '');
+          if(cardYuan && cardYuan !== srcYuan){
+            if(!D[tc.dynamicSource]) D[tc.dynamicSource] = {};
+            D[tc.dynamicSource][tc.dynamicField] = cardYuan;
+          }
+          cur.dynamicId = tc.dynamicId; cur.dynamicField = tc.dynamicField; cur.dynamicSource = tc.dynamicSource;
+          if(tc.ns) cur.ns = tc.ns;
+          delete cur.nv;
+          changed = true;
+        });
+        ex.data.cards = alignCards(ex.data.cards, tb.data.cards);
+      }
+      out.push(ex); used[tb.id] = true;
+    });
+    exList.forEach(function(b){ if(!used[b.id]) out.push(b); });  // 用户自建模块
+    return out;
+  }
+
+  var outBoards = [], usedB = {};
+  tplBoards.forEach(function(tb){
+    var ex = D.dashboard.boards.filter(function(b){ return b.id === tb.id; })[0];
+    if(!ex){
+      if(has(gone.boards, tb.id)) return;                      // 用户删过整个板块 → 不复活
+      ex = JSON.parse(JSON.stringify(tb));
+      ex.blocks = (ex.blocks||[]).filter(function(b){ return !has(gone.blocks, b.id); });
+      if(ex.subboards) ex.subboards = ex.subboards.filter(function(s){ return !has(gone.subs, s.id); });
+      changed = true;
+    } else {
+      ex.blocks = mergeBlocks(ex.blocks, tb.blocks || []);
+      var tplSubs = tb.subboards || [];
+      if(tplSubs.length){
+        if(!Array.isArray(ex.subboards)) ex.subboards = [];
+        var outSubs = [], usedS = {};
+        tplSubs.forEach(function(ts){
+          var es = ex.subboards.filter(function(s){ return s.id === ts.id; })[0];
+          if(!es){
+            if(has(gone.subs, ts.id)) return;                   // 用户删过子板块 → 不复活
+            es = JSON.parse(JSON.stringify(ts));
+            es.blocks = (es.blocks||[]).filter(function(b){ return !has(gone.blocks, b.id); });
+            changed = true;
+          } else {
+            es.blocks = mergeBlocks(es.blocks, ts.blocks || []);
+          }
+          outSubs.push(es); usedS[ts.id] = true;
+        });
+        ex.subboards.forEach(function(s){ if(!usedS[s.id]) outSubs.push(s); });
+        ex.subboards = outSubs;
+      }
+    }
+    outBoards.push(ex); usedB[tb.id] = true;
+  });
+  D.dashboard.boards.forEach(function(b){ if(!usedB[b.id]) outBoards.push(b); });
+  D.dashboard.boards = outBoards;
+
+  if(changed) saveDash();
+}
+
 // 月份操作
 function shiftMonth(n){
   const [y,m] = dashMonth.split('-').map(Number);
@@ -3484,12 +3645,25 @@ function editableVal(val, path, opts){
   var style = opts.style || '';
   var extra = opts.extra || '';
   var content = val;
-  if(opts.prefix) content = opts.prefix + content;
-  if(opts.suffix) content = content + opts.suffix;
-  if(opts.numberFormat) content = Number(content).toLocaleString();
-  var openTag = '<' + tag + ' class="dval ' + cls + '" data-bpath="' + escAttr(path) + '" style="' + style + '" ' + extra + ' onblur="saveDashboardVal(this)" contenteditable="true">';
+  if(opts.money){
+    /* 金额值：显示统一格式（如 6.32万元）；编辑时切回「元」原值，失焦后按元落库再重新格式化 */
+    var yuan = toYuan(val);
+    content = fmtMoney(yuan);
+    extra += ' data-money="1" data-raw="' + yuan + '"';
+  } else {
+    if(opts.prefix) content = opts.prefix + content;
+    if(opts.suffix) content = content + opts.suffix;
+    if(opts.numberFormat) content = Number(content).toLocaleString();
+  }
+  var openTag = '<' + tag + ' class="dval ' + cls + '" data-bpath="' + escAttr(path) + '" style="' + style + '" ' + extra + ' onfocus="moneyFocus(this)" onblur="saveDashboardVal(this)" contenteditable="true">';
   var closeTag = '</' + tag + '>';
   return openTag + esc(content) + closeTag;
+}
+/* 金额值进入编辑态：把 "6.32万元" 换回 "63200"，避免用户对着格式化文本改数字 */
+function moneyFocus(el){
+  if(el.getAttribute('data-money') !== '1') return;
+  var raw = el.getAttribute('data-raw');
+  if(raw !== null && raw !== '') el.textContent = raw;
 }
 
 /** 1. channel-sum: 渠道 GSV 汇总卡片组（带 +/= 运算符） */
@@ -3499,7 +3673,8 @@ function renderChannelSum(block, D, bid){
   (d.items||[]).forEach(function(it, i){
     html += '<div class="sum-card">'
       + editableVal(it.label, bpath(bid,block.id,'items#'+i+'.label'), {tag:'div', cls:'nl', style:'color:var(--'+it.color+')' })
-      + editableVal(it.value, bpath(bid,block.id,'items#'+i+'.value'), {tag:'div', cls:'nv', style:'color:var(--'+it.color+')' })
+      /* 金额值走同一个 isMoneyCard() 判定 + 同一个 fmtMoney()，与指标卡完全一致 */
+      + editableVal(it.value, bpath(bid,block.id,'items#'+i+'.value'), {tag:'div', cls:'nv', style:'color:var(--'+it.color+')', money:isMoneyCard({nl:it.label}) })
       + (it.sub ? '<div class="ns">'+editableVal(it.sub, bpath(bid,block.id,'items#'+i+'.sub'))+'</div>' : '')
       + '</div>';
     if(i < d.items.length-1) html += '<div class="sum-op">+</div>';
@@ -3508,7 +3683,7 @@ function renderChannelSum(block, D, bid){
     html += '<div class="sum-op">=</div>'
       + '<div class="sum-card total-card">'
       + editableVal(d.total.label, bpath(bid,block.id,'total.label'), {tag:'div', cls:'nl', style:'color:var(--'+(d.total.color||'brand')+');font-size:18px' })
-      + editableVal(d.total.value, bpath(bid,block.id,'total.value'), {tag:'div', cls:'nv', style:'color:var(--'+(d.total.color||'brand')+');font-size:18px' })
+      + editableVal(d.total.value, bpath(bid,block.id,'total.value'), {tag:'div', cls:'nv', style:'color:var(--'+(d.total.color||'brand')+');font-size:18px', money:isMoneyCard({nl:d.total.label}), approx:true })
       + (d.total.sub ? '<div class="ns" style="color:var(--red)">'+editableVal(d.total.sub, bpath(bid,block.id,'total.sub'))+'</div>' : '')
       + '</div>';
   }
@@ -3521,27 +3696,10 @@ function renderMetricCards(block, D, bid){
   var d = block.data, cards = d.cards || [];
   var html = '<div class="num-grid" style="margin-bottom:6px;">';
   cards.forEach(function(c, i){
-    // 动态值：从 D[source][field] 取
-    var nv = c.nv;
-    if(c.dynamicSource && c.dynamicField && D[c.dynamicSource]){
-      var raw = D[c.dynamicSource][c.dynamicField];
-      var dq=(c.dynamicId||'');
-      var isActGsv = (dq==='funnelActualGsv'||dq==='daboActualGsv'||dq==='tmallActualGsv');
-      var isCost   = (c.dynamicField==='cost');
-      /* 实际GSV卡片：到万显"¥X.XX万元"、未到显"¥x,xxx元"（不依赖存储字段，按卡片语义自动格式化） */
-      if(isActGsv || c.moneyWan) nv = fmtMoney(raw);
-      /* 消耗金额卡片：统一走 fmtMoney（<1万 → ¥X,XXX；≥1万 → X.XX万元） */
-      else if(isCost) nv = fmtMoney(raw);
-      else nv = raw ? (c.prefix||'') + (c.numberFormat?Number(raw).toLocaleString():raw) + (c.suffix||'') : '--';
-    }
-    // 计算值：如 ROI
-    if(c.computed && c.computeSource && D[c.computeSource]){
-      var args = (c.computeFields||[]).map(function(f){ return D[c.computeSource][f]; });
-      if(window[c.computeFn]) nv = window[c.computeFn].apply(null, args);
-      else nv = '--';
-    }
-    // 字段引用值
-    if(c.nvField && c.source && D[c.source]){ nv = D[c.source][c.nvField] || ''; }
+    /* 统一取值：静态 / 动态(D[source][field]) / 计算(ROI) / 字段引用 全部走 cardValue() */
+    var nv = cardValue(c, D);
+    /* 金额卡标记：供内联编辑时以「元」原值进出（避免把 "6.32万元" 再当数字解析） */
+    var money = isMoneyCard(c);
 
     /* 判断是否为静态目标值（无动态/计算/字段引用）→ 数字可点击编辑 */
     var isStaticTarget = !c.dynamicId && !c.computed && !c.nvField && !c.dynamicSource;
@@ -3551,7 +3709,9 @@ function renderMetricCards(block, D, bid){
       + '<button onclick="removeMetricCard(\''+escAttr(bid)+'\',\''+escAttr(block.id)+'\','+i+')" title="删除此卡片" style="position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,.06);color:var(--sub);font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">×</button>'
       + '<div class="nl" '+(c.nlStyle?'style="'+c.nlStyle+'"':'')+'>'+editableVal(c.nl, bpath(bid,block.id,'cards#'+i+'.nl'), {tag:'span'})+'</div>'
       + '<div class="nv" '+(c.nvStyle?'style="'+c.nvStyle+'"':'')+' id="'+(c.dynamicId||'')+'">'
-      + (isStaticTarget ? (c.prefix?'<span style="font-size:15px;opacity:.8">'+c.prefix+'</span>':'')+editableVal(nv, bpath(bid,block.id,'cards#'+i+'.nv'), {tag:'span'})+(c.nl&&c.nl.indexOf('目标 GSV')>=0?'<span style="font-size:15px;opacity:.8">万元</span>':'') : nv)
+      /* 动态/计算卡由数据源驱动 → 只读展示；纯静态卡 → 内联可编辑。
+         金额卡编辑时以「元」原值进出（data-money/data-raw），显示一律 fmtMoney。 */
+      + (isStaticTarget ? editableVal(c.nv, bpath(bid,block.id,'cards#'+i+'.nv'), {tag:'span', money:money}) : esc(String(nv)))
       + '</div>';
     // ns 行
     if(c.nsField && c.nsSource && D[c.nsSource]){
@@ -3590,7 +3750,9 @@ function removeMetricCard(bid, blockId, cardIdx){
   if(!db) return;
   var blk = findBoardBlock(db, blockId);
   if(!blk || !blk.data || !blk.data.cards) return;
+  var removed = blk.data.cards[cardIdx];
   blk.data.cards.splice(cardIdx, 1);
+  if(removed && removed.nl) rememberGone(D, 'cards', removed.nl);   // 墓碑：模板同步不得复活用户删掉的指标卡
   saveDash();
   renderStats();
   toast('已删除指标卡片');
@@ -3771,7 +3933,12 @@ function renderInputArea(block, D, bid){
   }
   html += '<span class="cia-label"'+labelCls+'>'+labelTag+label+'</span>'
     + '<input type="number" id="'+(d.inputId||'')+'" placeholder="输入金额" value="'+inputVal+'" onchange="saveMetric(\''+s+'\',\''+f+'\',this.value)" oninput="liveMetric(\''+s+'\',\''+f+'\',this.value)" />'
-    + '<span style="font-size:13px;color:var(--sub);">/ 目标 '+(typeof targetVal==='number'?targetVal.toLocaleString():targetVal)+' 元</span>';
+    /* 目标值：与顶部「🎯 目标 GSV」卡共用同一个 D[source][completionTarget] 字段，只有这一处可改，
+       卡片实时跟随 —— 目标数不再存在两份、不会再出现卡片与"/ 目标"对不上的情况。 */
+    + (tf
+        ? '<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--sub);white-space:nowrap;">/ 目标 '
+          + '<input type="number" id="'+escAttr((d.areaId||'')+'_target')+'" value="'+(targetVal===''||targetVal===null||targetVal===undefined?'':toYuan(targetVal))+'" onchange="saveMetric(\''+s+'\',\''+tf+'\',this.value)" oninput="liveMetric(\''+s+'\',\''+tf+'\',this.value)" style="width:96px;" /> 元</span>'
+        : '');
   /* 消耗金额输入行：只输入不显示 ROI 结果（ROI 已由顶部卡片展示）。noResult 或 inputField==='cost' 均不渲染行内结果。 */
   var suppressResult = d.noResult || (d.inputField==='cost');
   if(!suppressResult) html += '<span class="cia-result" id="'+(d.resultId||'')+'">'+resultPrefix+'<b>'+(d.roiMode?calcRoi(src.cost||'',src[d.inputField]||''):calcCompletionRate(inputVal, targetVal))+'</b></span>';
@@ -3827,6 +3994,7 @@ function renderWeeklyTable(block, D, bid){
 function saveDashboardVal(el){
   var path = el.getAttribute('data-bpath');
   if(!path) return;
+  var isMoney = el.getAttribute('data-money') === '1';
   var val = el.innerText.trim();
   const D = getDashData(dashMonth);
   // 解析路径如 "biz.biz-chsum.items#0.label"
@@ -3834,13 +4002,20 @@ function saveDashboardVal(el){
   var boardId = parts[0];
   var blockId = parts[1];
   var rest = parts.slice(2).join('.');
-  // 找到对应 board/block
+  // 找到对应 board/block（findBoardBlock 兼容子板块，否则达短/达播/商品卡内的编辑会静默失效）
   var db = D.dashboard && D.dashboard.boards ? D.dashboard.boards.filter(function(b){return b.id===boardId;})[0] : null;
   if(!db) return;
-  var blk = db.blocks ? db.blocks.filter(function(b){return b.id===blockId;})[0] : null;
+  var blk = findBoardBlock(db, blockId);
   if(!blk) return;
-  // 设置嵌套值
-  setNestedValue(blk.data, rest, val);
+  // 设置嵌套值：金额统一按「元」数值落库，再把显示刷回统一格式
+  if(isMoney){
+    var yuan = toYuan(val);
+    setNestedValue(blk.data, rest, yuan);
+    el.setAttribute('data-raw', yuan);
+    el.innerText = fmtMoney(yuan);
+  } else {
+    setNestedValue(blk.data, rest, val);
+  }
   saveDash();
   toast('已保存 ✓');
 }
@@ -4030,6 +4205,14 @@ function showAddBoardMenu(){
 }
 
 /** 删除板块（软删除进回收站） */
+/** 墓碑记录：用户主动删除过的板块 / 子板块 / 模块 / 指标卡，模板同步不得复活 */
+function rememberGone(D, kind, id){
+  if(!id) return;
+  if(!D._gone) D._gone = { boards:[], subs:[], blocks:[], cards:[] };
+  if(!Array.isArray(D._gone[kind])) D._gone[kind] = [];
+  if(D._gone[kind].indexOf(id) < 0) D._gone[kind].push(id);
+}
+
 function removeBoard(boardId){
   if(!confirm('确定删除整个板块？删除后进回收站，可随时恢复。')) return;
   const D = getDashData(dashMonth);
@@ -4037,6 +4220,7 @@ function removeBoard(boardId){
   if(!board) return;
   pushTrash({ kind:'board', label:(board.title||'板块'), board:JSON.parse(JSON.stringify(board)) });
   D.dashboard.boards = D.dashboard.boards.filter(function(b){ return b.id!==boardId; });
+  rememberGone(D, 'boards', boardId);   // 墓碑：模板同步不得复活用户删掉的板块
   saveDash();
   renderStats();
   toast('已移入回收站（可撤销）');
@@ -4103,6 +4287,7 @@ function removeBlock(boardId, blkId){
   pushTrash({ kind:'block', label:(board.title||'板块')+' · '+(hit.data&&hit.data.title||hit.type||'模块'), boardId:boardId, subId:subId, block:JSON.parse(JSON.stringify(hit)) });
   (board.subboards||[]).forEach(function(sub){ sub.blocks = sub.blocks.filter(function(b){ return b.id!==blkId; }); });
   board.blocks = board.blocks.filter(function(b){ return b.id!==blkId; });
+  rememberGone(D, 'blocks', blkId);     // 墓碑：模板同步不得复活用户删掉的模块
   saveDash();
   renderStats();
   toast('已移入回收站（可撤销）');
@@ -4484,26 +4669,68 @@ function delWeekRow(wi){
   if(D.weekly && D.weekly[wi]){ D.weekly.splice(wi,1); saveDash(); if(weeklyEditing) toggleWeeklyEdit(); renderStats(); toast('已删除'); }
 }
 
-// ====== 统一指标输入 / 计算（v96 重构：跨板块一致，告别每板块各写一套 save/live）======
-/* 统一金额格式化（需求4）：≥1万 → "X.XX万元"（不带¥）；<1万 → "¥X,XXX"（带千位分隔，不带"元"） */
+// ====== 统一金额 / 指标模型（v97：全站唯一入口，任何板块不再各写一套）======
+/* ① toYuan：把任何历史写法统一换算成「元」数值。
+   可识别：63200 / "63200" / "¥47,400" / "6.32万" / "6.32 万元" / "0.79万"。
+   这是金额的唯一存储形态（数值·元），一切显示再从它派生。 */
+function toYuan(v){
+  if(typeof v === 'number') return isNaN(v) ? 0 : v;
+  if(v === null || v === undefined || v === '') return 0;
+  var s = String(v).replace(/[¥￥,\s≈~]/g, '').replace(/元/g, '');
+  var m = s.match(/^(-?\d+(?:\.\d+)?)\s*(万)?$/);
+  if(m){ var n = parseFloat(m[1]) || 0; return m[2] ? Math.round(n * 10000) : n; }
+  var f = parseFloat(s.replace(/[^0-9.\-]/g, ''));
+  return isNaN(f) ? 0 : f;
+}
+/* ② fmtMoney：金额的唯一显示格式。
+     ≥1万 → "X.XX万元"（尾随 0 去掉）；<1万 → "¥X,XXX"（千位分隔）。 */
 function fmtMoney(v){
-  var n = Number(v);
+  var n = toYuan(v);
   if(!n) return '--';
   if(Math.abs(n) >= 10000){
-    var w = (n/10000).toFixed(2);
-    w = w.replace(/0+$/,'').replace(/\.$/,'');
+    var w = (n/10000).toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
     return w + '万元';
   }
   return '¥' + n.toLocaleString('en-US');
 }
 /* 兼容旧调用：fmtGSV 统一走 fmtMoney */
 function fmtGSV(v){ return fmtMoney(v); }
+/* ③ isMoneyCard：一张卡是不是金额卡，只看「语义」——不依赖各板块自录的
+     prefix / nvSuffix / moneyWan / numberFormat 标记（那正是 v96 显示"6.32 万万元"的根因）。 */
+function isMoneyCard(c){
+  if(!c) return false;
+  if(c.dynamicField === 'cost') return true;
+  return /GSV|消耗|费用|金额|合计/.test(c.nl || '');
+}
+/* ④ cardValue：任何卡片的显示值只由这一个函数产出。
+     静态值 / 动态值（来自 D[source][field]）/ 计算值（ROI）/ 字段引用 四种来源统一在此分派，
+     renderMetricCards 与 refreshDynamicCards 共用它 —— 两条渲染路径从此不可能再分叉。 */
+function cardValue(c, D){
+  D = D || {};
+  if(c.computed && c.computeSource && D[c.computeSource] && c.computeFn){
+    var fn = cardFn(c.computeFn);
+    if(fn) return fn.apply(null, (c.computeFields||[]).map(function(f){ return D[c.computeSource][f]; }));
+  }
+  var raw = c.nv;
+  if(c.nvField && c.source && D[c.source]) raw = D[c.source][c.nvField];
+  else if(c.dynamicSource && c.dynamicField && D[c.dynamicSource]) raw = D[c.dynamicSource][c.dynamicField];
+  if(raw === '' || raw === null || raw === undefined) return '--';
+  if(isMoneyCard(c)) return fmtMoney(raw);
+  return (c.prefix || '') + (c.numberFormat ? Number(raw).toLocaleString('en-US') : raw) + (c.suffix || c.nvSuffix || '');
+}
 /* ROI 口径（用户最终确认）：GSV ÷ 消耗 = 每投 1 元带回多少销售额（投产比）。
    例：GSV ¥1364 / 消耗 ¥6870 = 0.20（<1 表示亏损，正常应 <1）。返回 gsv/cost。 */
 function calcRoi(cost, gsv){
   cost = Number(cost)||0; gsv = Number(gsv)||0;
   if(cost<=0 || gsv<=0) return '--';
   return (gsv/cost).toFixed(2);
+}
+/* 计算函数注册表：卡片里只写函数名（computeFn），取值时走注册表，
+   不再依赖「全局名恰好存在」这种隐式约定。新增计算指标 = 往这里加一行。 */
+function cardFn(name){
+  var reg = { calcRoi: calcRoi };
+  if(reg[name]) return reg[name];
+  return (typeof window !== 'undefined' && typeof window[name] === 'function') ? window[name] : null;
 }
 
 /* 通用落库：所有 input-area 输入框统一经 saveMetric(source, field, val) 写入 D[source][field]，
@@ -4531,24 +4758,11 @@ function refreshDynamicCards(D, source){
     (list||[]).forEach(function(blk){
       if(blk.type==='metric-cards' && blk.data && blk.data.cards){
         blk.data.cards.forEach(function(c){
-          if(c.dynamicSource===source && c.dynamicField){
-            var el = document.getElementById(c.dynamicId);
-            if(el){
-              var raw = D[source][c.dynamicField];
-              var nv;
-              if(c.moneyWan) nv = fmtMoney(raw);
-              else if(c.dynamicField==='cost') nv = raw ? fmtMoney(raw) : '--';
-              else nv = (raw!=null && raw!=='') ? (c.prefix||'')+(c.numberFormat?Number(raw).toLocaleString():raw)+(c.suffix||'') : '--';
-              el.innerHTML = nv;
-            }
-          }
-          if(c.computed && c.computeSource===source && D[c.computeSource] && c.computeFn && window[c.computeFn]){
-            var ec = document.getElementById(c.dynamicId);
-            if(ec){
-              var args = (c.computeFields||[]).map(function(f){ return D[c.computeSource][f]; });
-              ec.innerHTML = window[c.computeFn].apply(null, args);
-            }
-          }
+          /* 与 renderMetricCards 共用 cardValue()，只更新受本次输入影响的卡片（不重绘，保留输入焦点） */
+          var affected = (c.dynamicSource===source && c.dynamicField) || (c.computed && c.computeSource===source);
+          if(!affected || !c.dynamicId) return;
+          var el = document.getElementById(c.dynamicId);
+          if(el) el.innerHTML = esc(String(cardValue(c, D)));
         });
       }
     });
