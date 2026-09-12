@@ -2989,18 +2989,15 @@ function currentDashMonth(){
 /* 按真实月份日历生成周次（周一→周日，覆盖整月；首周若 1 号不是周一则为不完整周） */
 function genWeeks(ym){
   var parts = ym.split('-'); var y=+parts[0], m=+parts[1];
-  var d = new Date(y, m-1, 1);
-  var dow = d.getDay(); // 0=日..6=六
-  if(dow !== 1){
-    var back = (dow===0?6:dow-1);
-    if(d.getDate()-back >= 1) d.setDate(d.getDate()-back); // 回退到本月内的周一；否则保留 1 号（首周不完整）
-  }
-  var weeks = [], wk = 0;
-  while(d.getMonth() === m-1){
-    var start = new Date(d);
-    var end = new Date(d); end.setDate(end.getDate()+6);
-    var sM=String(start.getMonth()+1).padStart(2,'0'), sD=String(start.getDate()).padStart(2,'0');
-    var eM=String(end.getMonth()+1).padStart(2,'0'), eD=String(end.getDate()).padStart(2,'0');
+  // 周例会按「周一→周日」切分：取包含 1 号的那一周的周一（可能落在上一月，标准日历周）
+  var first = new Date(y, m-1, 1);
+  var dow = first.getDay(); // 0=日..6=六
+  var monday = new Date(y, m-1, 1 - (dow===0?6:dow-1));
+  var weeks = [], wk = 0, d = new Date(monday);
+  while(d.getMonth() <= m-1){ // 周一阵营仍在当前月或之前都生成；越过本月即停止
+    var s = new Date(d), e = new Date(d); e.setDate(e.getDate()+6);
+    var sM=String(s.getMonth()+1).padStart(2,'0'), sD=String(s.getDate()).padStart(2,'0');
+    var eM=String(e.getMonth()+1).padStart(2,'0'), eD=String(e.getDate()).padStart(2,'0');
     wk++;
     weeks.push({
       weekLabel: '第'+wk+'周 ('+sM+'.'+sD+'-'+eM+'.'+eD+')',
@@ -3008,6 +3005,7 @@ function genWeeks(ym){
       inviteDone:0, linkDone:0, publishDone:0, publishTarget:'', note:''
     });
     d.setDate(d.getDate()+7);
+    if(weeks.length>6) break;
   }
   return weeks;
 }
@@ -3399,17 +3397,17 @@ function migrateV96ProductcardToSubboard(D, ym){
 // v96：周例会严格按「真实月份日历、周一→周日」生成周次，修复 9 月仍显示 8 月周的问题。
 // 幂等：空 → 生成；已有但月份不符（旧残留）→ 按真实月份重建并尽力保留已填数值；已正确 → 不动。
 function migrateV96WeeklyRealMonth(D, ym){
-  if(!D.weekly || !Array.isArray(D.weekly) || D.weekly.length===0){
-    D.weekly = genWeeks(ym); saveDash(); return;
-  }
-  var m = +ym.split('-')[1];
-  var inMonth = D.weekly.every(function(w){
-    var mm = (w.dateRange||'').match(/^(\d{1,2})\.(\d{1,2})/);
-    return mm ? (+mm[1]===m) : false;
-  });
-  if(inMonth) return; // 已属本月份，无需处理
   var fresh = genWeeks(ym);
-  if(fresh.length === D.weekly.length){
+  if(!D.weekly || !Array.isArray(D.weekly) || D.weekly.length===0){
+    D.weekly = fresh; saveDash(); return;
+  }
+  // 已生成的周次是否与本月真实周次一致（按 dateRange 比对，容忍已填数值；首周可能 spill 到上月，故不能用"起始月=本月"判断）
+  var sameShape = (D.weekly.length===fresh.length) && D.weekly.every(function(w,i){
+    return (w.dateRange||'') === (fresh[i].dateRange||'');
+  });
+  if(sameShape) return; // 已属本月份真实周次，无需处理
+  // 形状不符（旧月份残留 / 份数不同）→ 按真实月份重建，并尽力按 index 保留已填数值
+  if(D.weekly.length === fresh.length){
     fresh.forEach(function(w,i){
       var old = D.weekly[i]; if(old){
         w.inviteDone = old.inviteDone||0; w.linkDone = old.linkDone||0;
