@@ -1457,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v93</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v94</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -4960,7 +4960,7 @@ let days = loadDays();
        用云端最后一份带勾选备注的备份回灌；仅覆盖"本机仍为空白"的固定项，
        不覆盖你之后新勾选或新写的备注。9003 在云端全为未勾选空白，故不在还原表内。 */
     var FIXED_TPL={
-      '9001':{contact:'安棋', text:'【视频】16:00 审核达人短视频视频', owner:'me'},
+      '9001':{contact:'安棋', text:'【视频】16:00 审核达人短视频', owner:'me'},
       '9002':{contact:'安棋', text:'【名单】17:00 筛选达人短视频名单', owner:'me'},
       '9003':{contact:'小红书', text:'添加小红书直播博主微信', owner:'me'}
     };
@@ -5006,11 +5006,27 @@ let days = loadDays();
     localStorage.setItem('wb_days_v86c','1');
   }catch(e){}
 })();
+/* v94：固定项 9001 种子曾误写「审核达人短视频视频」（视频视频双字冗余），
+   本地删改易被种子/云端旧值覆盖而反复出现。此处一次性把已存储的、且仍是该错误串的
+   9001 每日项归一化为正确文本，避免重复出现。仅精确匹配错误串，不碰用户的其它自定义改写。 */
+(function fix9001Video(){
+  try{
+    if(localStorage.getItem('wb_fix_9001v_v94')) return;
+    var BAD='【视频】16:00 审核达人短视频视频', GOOD='【视频】16:00 审核达人短视频', changed=false;
+    Object.keys(days).forEach(function(d){
+      (days[d].todos||[]).forEach(function(t){
+        if(_sameId(t.id,'9001') && t.text===BAD){ t.text=GOOD; changed=true; }
+      });
+    });
+    if(changed) saveDays();
+    localStorage.setItem('wb_fix_9001v_v94','1');
+  }catch(e){}
+})();
 saveDays(); // 将纠偏(周一还原)与周二/周三生成结果立即持久化，避免下次打开又重来
 /* 每日固定项（模板）：每天自动出现，按 id 去重注入各天 */
 const KEY_DAILY = "wb_ax_daily_v1";
 const SEED_DAILY = [
-  {id:9001, contact:"安棋", text:"【视频】16:00 审核达人短视频视频", note:"", owner:"me"},
+  {id:9001, contact:"安棋", text:"【视频】16:00 审核达人短视频", note:"", owner:"me"},
   {id:9002, contact:"安棋", text:"【名单】17:00 筛选达人短视频名单", note:"", owner:"me"},
   {id:9003, contact:"小红书", text:"添加小红书直播博主微信", note:"", owner:"me"}
 ];
@@ -5211,7 +5227,7 @@ function renderTodoList(){
             <input class="todo-edit-input" id="editContact_${t.id}" value="${escAttr(t.contact||'')}" placeholder="对接方" />
             <textarea class="todo-edit-text" id="editText_${t.id}" placeholder="事项内容（支持回车换行）">${esc(t.text)}</textarea>
             <input class="todo-note" id="editProject_${t.id}" value="${escAttr(t.project||'')}" placeholder="项目/主题(可选，用于项目跟进分组)" />
-            <textarea class="todo-note" placeholder="手动填写备注 / 数据 / 进度…" onchange="setNote(${t.id}, this.value)">${esc(t.note||'')}</textarea>
+            <textarea class="todo-note" id="note_${t.id}" placeholder="手动填写备注 / 数据 / 进度…" oninput="setNote(${t.id}, this.value)" onblur="setNote(${t.id}, this.value)">${esc(t.note||'')}</textarea>
             <div class="todo-edit-row"><label>归属：</label>
               <button class="mini ${!isThem?'on':''}" onclick="setOwner(${t.id},'me')">我的待办</button>
               <button class="mini ${isThem?'on':''}" onclick="setOwner(${t.id},'them')">对方待办</button>
@@ -5224,7 +5240,7 @@ function renderTodoList(){
             </div>` : `
             <div class="todo-text">${t.daily?'<span class="todo-daily">每日</span> ':''}${esc(t.text)}</div>
             ${(t._projName||t.project)?`<span class="todo-proj">🏷 ${esc(t._projName||t.project)}</span>`:''}
-            <textarea class="todo-note" placeholder="备注 / 数据 / 进度…" onchange="setNote(${t.id}, this.value)">${esc(t.note||'')}</textarea>
+            <textarea class="todo-note" id="note_${t.id}" placeholder="备注 / 数据 / 进度…" oninput="setNote(${t.id}, this.value)" onblur="setNote(${t.id}, this.value)">${esc(t.note||'')}</textarea>
             ${isThem?`<button style="margin-top:7px;font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid #f0c89a;background:#fff7ed;color:#e8920c;cursor:pointer;font-weight:600" onclick="toggleTodoDone(${t.id})">${done?'✓ 对方已完成':'○ 标记对方已完成'}</button>`:''}
             ${attHTML(t)}
             ${timerHTML(t)}
