@@ -364,16 +364,16 @@
   .chart-bar-wrap{width:100%;height:170px;display:flex;align-items:flex-end;justify-content:center;gap:8px;}
   .chart-bar{width:30px;border-radius:5px 5px 0 0;transition:height .4s;min-height:3px;position:relative;}
   .chart-bar .cb-val{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;white-space:nowrap;color:var(--ink);z-index:3;}
-  /* 目标柱：浅色/描边 */
-  .chart-bar.bar-target{background:rgba(45,120,255,.18);border:2px solid rgba(45,120,255,.5);}
-  /* 实际柱：统一暖橙色（与目标浅蓝形成强对比） */
-  .chart-bar.bar-actual-good{background:#ff7b2e;}
-  .chart-bar.bar-actual-warn{background:#ff7b2e;}
-  .chart-bar.bar-actual-bad{background:#ff7b2e;}
+  /* 目标柱 = 极浅底 + 同色相虚线描边（沿用全站「虚线=目标」约定）；实际柱 = 同色相实心 */
+  .chart-bar.bar-target{border-style:dashed;border-width:2px;}
   .chart-label{font-size:11.5px;color:var(--sub);font-weight:600;text-align:center;margin-top:4px;}
   .chart-month-label{font-size:11px;color:var(--sub);text-align:center;margin-bottom:4px;font-weight:600;min-height:16px;}
-  .chart-legend{display:flex;gap:14px;justify-content:center;margin-top:8px;flex-wrap:wrap;}
-  .chart-legend span{font-size:11px;display:flex;align-items:center;gap:4px;color:var(--sub);}
+  .chart-legend{display:flex;gap:14px;justify-content:center;align-items:center;margin-top:8px;flex-wrap:wrap;}
+  .chart-legend .lg-item{font-size:11px;display:inline-flex;align-items:center;gap:4px;color:var(--sub);}
+  .chart-legend .lg-sw{display:inline-block;width:11px;height:11px;border-radius:2px;box-sizing:border-box;flex:0 0 auto;}
+  .chart-legend .lg-sw-target{background:hsl(212,14%,92%);border:1.5px dashed hsl(212,12%,58%);}
+  .chart-legend .lg-sw-actual{background:hsl(212,16%,56%);}
+  .chart-legend .lg-div{width:1px;height:12px;background:var(--line);}
 
   /* 内联编辑表格 */
   .edit-table td{vertical-align:middle;}
@@ -1457,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v99</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v100</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -2974,7 +2974,7 @@ document.getElementById('btnSave').onclick=()=>{
 /*
   数据模型：按月份存储，每个月份一份独立数据
   KEY_DASH = 'wb_ax_dashboard_v1'
-  结构: { "2026-07": { business:{...}, channels:{...}, funnel:{...}, daboke:{...}, koc:{...}, weekly:[] }, ... }
+  结构: { "2026-07": { channels:{...}, funnel:{...}, daboke:{...}, koc:{...}, weekly:[] }, ... }
 */
 
 const KEY_DASH = 'wb_ax_dashboard_v1';
@@ -3147,15 +3147,8 @@ function defaultDashData(ym){
       ]
     },
     // ── 旧版扁平字段（保留用于兼容和快捷存取；新代码优先读 dashboard.boards）──
-    business: {
-      tag: isAug ? '格物8月推广计划' : (ym+' 推广计划'),
-      rows: [
-        { name: '自营商品卡', gsvPct: '30%', gsvTarget: '4.74 万', cost: '3.70 万', roi: '1.28', task: '商品卡投流，稳固基础销量' },
-        { name: '合作达短', gsvPct: '40%', gsvTarget: '6.32 万', cost: '8.20 万', roi: '1.30', task: '短视频投流放量，孵化爆款素材' },
-        { name: '合作达播', gsvPct: '30%', gsvTarget: '4.74 万', cost: '0（纯佣）', roi: '纯佣驱动', task: '纯佣直播拓量' }
-      ],
-      total: { gsvPct: '100%', gsvTarget: '15.8 万', cost: '11.90 万', roi: '1.33', task: '全域投放统筹，控费提效' }
-    },
+    // v100：已删除 business（旧版手搓「生意大盘计划表」的数据副本，唯一读取方 toggleBizEdit 已删；
+    //       可见的「抖店GSV 细分」表由 biz-tbl 卡片承载，与它无关）
     channels: {
       douyin: { label: '抖音 GSV 目标', value: '15.8万', sub: '自营4.74+达短6.32+达播4.74' },
       tmall: { label: '天猫 GSV 目标', value: '2万', sub: '费用 0.6万' },
@@ -3308,6 +3301,8 @@ function getDashData(ym){
   migrateV96WeeklyRealMonth(dashData[ym], ym);
   // v97（幂等，每次校验）：统一金额模型 + 加性模板同步（补上新增的指标卡 / 模块 / 子板块）
   migrateV97(dashData[ym], ym);
+  // v100（幂等）：修复「目标值被误填成万字面数字」的历史污染（如 3→30000、4.74→47400）
+  migrateV100TargetUnits(dashData[ym]);
   return dashData[ym];
 }
 // 旧版本字段一次性迁移（幂等：仅修正旧值，不触碰用户已删除的内容）
@@ -3427,6 +3422,29 @@ function migrateV96WeeklyRealMonth(D, ym){
       —— 已存在的一律原样保留（不覆盖用户任何数据与手工修改）
       —— 用户主动删除过的东西记在 D._gone 墓碑里，永不被模板同步复活
    全函数幂等：没变化就不写盘。 */
+/* v100（幂等）：修复「目标值被误填成万字面数字」的历史污染。
+   症状：目标 GSV 卡显示 "¥3" / "¥4.74"，而不是 "3万元" / "4.74万元"。
+   根因：目标输入框历史上接受过裸数字 —— 用户按「万」的直觉填了 3、4.74，而
+        completionTarget 的语义是「元」，于是 3 被当成 3 元。同类历史污染：达短目标曾为 43
+        （见 migrateFunnelFields 里的 ===43 → 63200 补丁）。
+   判据与边界：本业务月度 GSV 目标最低为 2 万元（20000 元），因此目标值落在 (0,1000)
+        区间只可能是「万字面数字」→ ×10000 还原。修复后值 ≥10000，天然幂等、不会重复放大。
+   时序：本函数跑在 pullAll 之后（getDashData → renderStats 链），故修好的值会随下一次推送回写云端。 */
+function migrateV100TargetUnits(D){
+  var fixed = [];
+  ['funnel','daboke','productcard','tmall'].forEach(function(s){
+    var o = D[s]; if(!o) return;
+    var v = Number(o.completionTarget);
+    if(isFinite(v) && v > 0 && v < 1000){
+      o.completionTarget = Math.round(v * 10000);
+      fixed.push(s + ' 目标 ' + v + '万 → ' + o.completionTarget);
+    }
+  });
+  if(fixed.length){
+    saveDash();
+    try{ toast('已自动修正目标值：' + fixed.join('；')); }catch(e){}
+  }
+}
 function migrateV97(D, ym){
   var changed = false;
   var SOURCES = ['funnel','daboke','productcard','tmall'];
@@ -3961,7 +3979,7 @@ function renderInputArea(block, D, bid){
        卡片实时跟随 —— 目标数不再存在两份、不会再出现卡片与"/ 目标"对不上的情况。 */
     + (tf
         ? '<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--sub);white-space:nowrap;">/ 目标 '
-          + '<input type="number" id="'+escAttr((d.areaId||'')+'_target')+'" value="'+(targetVal===''||targetVal===null||targetVal===undefined?'':toYuan(targetVal))+'" onchange="saveMetric(\''+s+'\',\''+tf+'\',this.value)" oninput="liveMetric(\''+s+'\',\''+tf+'\',this.value)" style="width:96px;" /> 元</span>'
+          + '<input type="number" id="'+escAttr((d.areaId||'')+'_target')+'" value="'+(targetVal===''||targetVal===null||targetVal===undefined?'':(Math.round(toYuan(targetVal)/100)/100))+'" placeholder="单位：万" onchange="saveTargetMetric(\''+s+'\',\''+tf+'\',this.value)" oninput="liveTargetMetric(\''+s+'\',\''+tf+'\',this.value)" style="width:80px;" /> 万</span>'
         : '');
   /* 消耗金额输入行：只输入不显示 ROI 结果（ROI 已由顶部卡片展示）。noResult 或 inputField==='cost' 均不渲染行内结果。 */
   var suppressResult = d.noResult || (d.inputField==='cost');
@@ -4515,9 +4533,19 @@ function renderFunnelChart(D){
   // 需求4：仅显示最近 3 个月
   const months = allMonths.slice(-3);
 
-  // 每月独立色系（目标深 / 实际浅）；固定调色板循环（红/蓝/绿，对应 7月/8月/9月示例）
-  const HUES = [0, 210, 120];
-  function monthHue(i){ return HUES[i % HUES.length]; }
+  /* 莫兰迪低饱和调色板：每月一个柔和色相，循环取用（陶粉 / 灰蓝 / 鼠尾草绿）。
+     目标柱 = 极浅底 + 同色相虚线描边；实际柱 = 同色相实心（略深）→ 虚/实一眼区分目标与实际，
+     色相只负责区分月份，语义（目标 vs 实际）与月份解耦，不再互相干扰。 */
+  const MORANDI = [
+    { h: 12,  s: 22 },   // 陶粉
+    { h: 212, s: 18 },   // 灰蓝
+    { h: 150, s: 16 }    // 鼠尾草绿
+  ];
+  function monthTone(i){ return MORANDI[i % MORANDI.length]; }
+  function tFill(t){ return 'hsl('+t.h+','+t.s+'%,91%)'; }                 // 目标底色（极浅）
+  function tLine(t){ return 'hsl('+t.h+','+Math.min(t.s+8,28)+'%,58%)'; }  // 目标虚线描边
+  function aFill(t){ return 'hsl('+t.h+','+t.s+'%,55%)'; }                 // 实际实心
+  function tText(t){ return 'hsl('+t.h+','+Math.min(t.s+8,26)+'%,36%)'; }  // 月份标签字色
   function mmLabel(mm){ return mm.replace('2026-','').replace('-','/')+'月'; }
 
   // 指标来自数组（可增删），漏斗行与柱状图共用
@@ -4559,15 +4587,13 @@ function renderFunnelChart(D){
           var tVal = v.t, aVal = v.a;
           var tPct = maxV > 0 ? Math.round(tVal/maxV*100) : 0;
           var aPct = maxV > 0 ? Math.round(aVal/maxV*100) : 0;
-          var h = monthHue(mi);
-          var tColor = 'hsl('+h+',70%,42%)'; // 目标：深
-          var aColor = 'hsl('+h+',70%,65%)'; // 实际：浅
+          var tone = monthTone(mi);
           return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:46px;">'
-            + '<div class="chart-month-label" style="color:'+tColor+';font-weight:700;">'+mmLabel(mm)+'</div>'
+            + '<div class="chart-month-label" style="color:'+tText(tone)+';font-weight:700;">'+mmLabel(mm)+'</div>'
             + '<div style="display:flex;gap:5px;align-items:flex-end;height:150px;padding-top:24px;">'
-            + '<div class="chart-bar" style="height:'+Math.max(tPct,2)+'%;background:'+tColor+';" title="目标: '+tVal+'">'
+            + '<div class="chart-bar bar-target" style="height:'+Math.max(tPct,2)+'%;background:'+tFill(tone)+';border:2px dashed '+tLine(tone)+';" title="目标: '+tVal+'">'
               + '<span class="cb-val">'+tVal.toLocaleString()+'</span></div>'
-            + '<div class="chart-bar" style="height:'+Math.max(aPct,2)+'%;background:'+aColor+';" title="实际: '+aVal+'">'
+            + '<div class="chart-bar bar-actual" style="height:'+Math.max(aPct,2)+'%;background:'+aFill(tone)+';" title="实际: '+aVal+'">'
               + '<span class="cb-val">'+aVal.toLocaleString()+'</span></div>'
             + '</div></div>';
         }).join('')
@@ -4576,54 +4602,25 @@ function renderFunnelChart(D){
         + '</div>';
     }).join('')
     + '</div>'
+    /* 图例：先声明「虚线框=目标 / 实心=实际」，再列各月色相 —— 每根柱子都能对号入座 */
     + '<div class="chart-legend">'
+    +   '<span class="lg-item"><span class="lg-sw lg-sw-target"></span>目标</span>'
+    +   '<span class="lg-item"><span class="lg-sw lg-sw-actual"></span>实际</span>'
+    +   '<span class="lg-div"></span>'
     + months.map(function(mm, mi){
-        var h = monthHue(mi);
-        return '<span style="display:inline-flex;align-items:center;gap:3px;margin-right:10px;">'
-          + '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:hsl('+h+',70%,42%);"></span>'
-          + '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:hsl('+h+',70%,65%);"></span>'
-          + mmLabel(mm)+'</span>';
+        var tone = monthTone(mi);
+        return '<span class="lg-item"><span class="lg-sw" style="background:'+aFill(tone)+';"></span>'+mmLabel(mm)+'</span>';
       }).join('')
     + '</div>';
 }
 
 // ---- 编辑功能 ----
 
-// 生意大盘编辑
-let bizEditing = false;
-function toggleBizEdit(){
-  bizEditing = !bizEditing;
-  const D = getDashData(dashMonth);
-  const body = document.getElementById('bizBody');
-  if(!body) return;
-  if(bizEditing){
-    body.classList.add('edit-table');
-    body.innerHTML = D.business.rows.map(function(r,i){
-      return '<tr data-i="'+i+'">'
-        +'<td><input value="'+escAttr(r.name)+'" data-field="name" data-i="'+i+'" /></td>'
-        +'<td><input value="'+escAttr(r.gsvPct)+'" data-field="gsvPct" data-i="'+i+'" /></td>'
-        +'<td><input value="'+escAttr(r.gsvTarget)+'" data-field="gsvTarget" data-i="'+i+'" /></td>'
-        +'<td><input value="'+escAttr(r.cost)+'" data-field="cost" data-i="'+i+'" /></td>'
-        +'<td><input value="'+escAttr(r.roi)+'" data-field="roi" data-i="'+i+'" /></td>'
-        +'<td><input value="'+escAttr(r.task)+'" data-field="task" data-i="'+i+'" /></td></tr>';
-    }).join('')
-    + '<tr class="total"><td>抖音抖店 合计</td><td>'+D.business.total.gsvPct+'</td><td>'+D.business.total.gsvTarget+'</td><td>'+D.business.total.cost+'</td><td>'+D.business.total.roi+'</td><td>'+D.business.total.task+'</td></tr>'
-    + '<tr><td colspan="6" style="text-align:right;padding:8px;"><button class="edit-btn" onclick="saveBizEdit()" style="background:var(--brand);color:#fff;border:none;padding:6px 16px;border-radius:8px;font-size:13px;">💾 保存修改</button> <button class="edit-btn" onclick="toggleBizEdit()" style="padding:6px 12px;">取消</button></td></tr>';
-    // 绑定 input 变更自动更新内存
-    body.querySelectorAll('input').forEach(function(inp){
-      inp.addEventListener('change', function(){
-        var ii=parseInt(this.dataset.i), f=this.dataset.field;
-        if(D.business.rows[ii]) D.business.rows[ii][f]=this.value;
-      });
-    });
-  } else {
-    body.classList.remove('edit-table');
-    renderStats();
-  }
-}
-function saveBizEdit(){
-  saveDash(); toggleBizEdit(); toast('生意大盘已保存 ✓');
-}
+/* v100 删除：toggleBizEdit / saveBizEdit / bizEditing（生意大盘旧版手搓表格的就地编辑）。
+   该功能在 v96 把数据 tab 重构为「板块-卡片」通用模型后即失效——它要找的 DOM 锚点
+   `#bizBody` 从未在页面创建过，故一进来就 return；且可见的「抖店GSV 细分」表已改由
+   通用 table 卡片（biz-tbl）渲染，数据源与它无关。配套的 D.business 扁平字段一并移除。
+   —— 若将来要让这张表可编辑，请走统一模型（editableVal + table 卡片），不要复活本函数。 */
 
 // KOC 喜耀编辑
 let kocField = null;
@@ -4780,6 +4777,17 @@ function liveMetric(source, field, val){
   D[source][field] = val;
   refreshDynamicCards(D, source);
   refreshInputResults(D, source);
+}
+/* 目标值输入框以「万」为单位显示/输入（用户直觉是 3 = 3万）。
+   落库前把输入框的「万字面数字」×10000 转成「元」，与 completionTarget 语义对齐，
+   彻底杜绝再次被存成字面小数字（如 3→¥3）的污染。 */
+function saveTargetMetric(source, field, val){
+  var wan = parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
+  saveMetric(source, field, Math.round(wan * 10000));
+}
+function liveTargetMetric(source, field, val){
+  var wan = parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
+  liveMetric(source, field, Math.round(wan * 10000));
 }
 /* 更新某 source 下所有动态/计算指标卡片（按 dynamicId 定位 DOM，避免整页重绘丢焦点） */
 function refreshDynamicCards(D, source){
