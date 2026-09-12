@@ -153,6 +153,7 @@
   /* ===== 项目卡（按【】聚合，步骤=todo+附加steps） ===== */
   .nproj-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;}
   .nproj-card.nproj-done{opacity:.65;background:#f6f7f9;}
+  .nproj-card.nproj-steps-done{border-color:#b8e6c7;background:#f3fbf6;}
   .nproj-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
   .nproj-name{font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;flex:1 1 auto;min-width:0;}
   .nproj-name:hover{color:var(--accent,#2c5282);}
@@ -160,6 +161,7 @@
   .nproj-meta{font-size:11px;color:var(--sub);flex:1 1 auto;}
   .nproj-progress{font-size:11px;font-weight:700;color:var(--accent,#2c5282);background:#e8eef7;padding:2px 8px;border-radius:10px;flex:0 0 auto;}
   .nproj-progress.all-done{background:#d8f0e0;color:#27ae60;}
+  .nproj-progress.steps-done{background:#eaf7ef;color:#27ae60;border:1px solid #b8e6c7;}
   .nproj-btn{font-size:11px;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:3px 8px;cursor:pointer;flex:0 0 auto;}
   .nproj-btn:hover{background:var(--bg);}
   .nproj-btn-primary{color:#fff;background:var(--accent,#2c5282);border-color:var(--accent,#2c5282);}
@@ -1455,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v92</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v93</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -2069,30 +2071,22 @@ function aggregateByProj(){
     merged[n]={todos:map[n].todos.slice(), itemMeta:map[n].itemMeta, extraSteps:map[n].extraSteps.slice(), done:map[n].done, _mergedFrom:[n]};
   });
 
-  /* b) 先对 loose 名做内部归并成"候选卡"，再整卡吸附锚定（保证 loosens 里相互聚合的名字
-         [如 8月原创视频 / 8月原创10条产品视频] 一起被吸附，不遗漏成员） */
-  var looseReps={}; /* loose代表名 -> {todos, extraSteps, _mergedFrom} */
-  if(looseNames.length){
-    var mm = (typeof mergeProjGroups==='function' && looseNames.length>1) ? mergeProjGroups(looseNames) : {};
-    looseNames.forEach(function(n){
-      var rep=mm[n]||n;
-      if(!looseReps[rep]) looseReps[rep]={todos:[], itemMeta:null, extraSteps:[], done:false, _mergedFrom:[]};
-      looseReps[rep].todos=looseReps[rep].todos.concat(merged[n].todos);
-      looseReps[rep].extraSteps=looseReps[rep].extraSteps.concat(merged[n].extraSteps);
-      looseReps[rep]._mergedFrom.push(n);
-      if(!looseReps[rep].itemMeta && merged[n].itemMeta) looseReps[rep].itemMeta=merged[n].itemMeta;
-    });
-  }
-
-  /* c) 每张 loose 候选卡按代表名打分，吸附到最相似的锚定项；无相似锚定则独立成卡 */
+  /* b)+c) 聚类吸附（v93 改：按成员各自选最优锚点，不整组拖）
+     旧逻辑：先 mergeProjGroups 把相似 loose 名并成"代表组"，再用代表名打分整组吸到最相似锚点，
+             导致"商品卡"家族的若干名被代表名错打分、整组拖进"产品视频"锚点（误吸附）。
+     新逻辑：① 每个 loose 名【独立】找最相似锚点吸附；② 没匹配到锚点的 loose 名，仅在彼此间做
+             内部归并（避免重复卡），但绝不吸进不带相同语义的锚点。
+     效果：8月10条原创商品卡视频 / 8月10条商品卡原创视频 各自归到"商品卡"锚点（或独立成卡），
+           不再整组混进 8月10条产品视频。 */
   var final={};
   anchorNames.forEach(function(n){ final[n]=merged[n]; });
-  Object.keys(looseReps).forEach(function(rep){
+  var unmatchedLoose=[];
+  looseNames.forEach(function(n){
     var best='', bestSc=0;
     if(anchorNames.length && typeof projSimScore==='function'){
       anchorNames.forEach(function(an){
-        if(projNamesShouldMerge(rep, an)){
-          var sc=projSimScore(rep, an);
+        if(projNamesShouldMerge(n, an)){
+          var sc=projSimScore(n, an);
           if(sc>bestSc){ bestSc=sc; best=an; }
         }
       });
@@ -2100,14 +2094,26 @@ function aggregateByProj(){
     if(best){
       var acc=final[best];
       if(!acc){ final[best]={todos:[], itemMeta:null, extraSteps:[], done:false, _mergedFrom:[best]}; acc=final[best]; }
-      acc.todos=acc.todos.concat(looseReps[rep].todos);
-      acc.extraSteps=acc.extraSteps.concat(looseReps[rep].extraSteps);
-      acc._mergedFrom=acc._mergedFrom.concat(looseReps[rep]._mergedFrom.filter(function(x){return x!==best;}));
-      if(!acc.itemMeta && looseReps[rep].itemMeta) acc.itemMeta=looseReps[rep].itemMeta;
-      return;
+      acc.todos=acc.todos.concat(map[n].todos);
+      acc.extraSteps=acc.extraSteps.concat(map[n].extraSteps);
+      acc._mergedFrom=acc._mergedFrom.concat([n].filter(function(x){return x!==best;}));
+      if(!acc.itemMeta && map[n].itemMeta) acc.itemMeta=map[n].itemMeta;
+    } else {
+      unmatchedLoose.push(n);
     }
-    final[rep]=looseReps[rep];
   });
+  /* 没匹配到锚点的 loose 名：仅在彼此间做内部归并，独立成卡（不吸进错锚点） */
+  if(unmatchedLoose.length){
+    var mm = (typeof mergeProjGroups==='function' && unmatchedLoose.length>1) ? mergeProjGroups(unmatchedLoose) : {};
+    unmatchedLoose.forEach(function(n){
+      var rep=mm[n]||n;
+      if(!final[rep]){ final[rep]={todos:[], itemMeta:null, extraSteps:[], done:false, _mergedFrom:[]}; }
+      final[rep].todos=final[rep].todos.concat(map[n].todos);
+      final[rep].extraSteps=final[rep].extraSteps.concat(map[n].extraSteps);
+      final[rep]._mergedFrom.push(n);
+      if(!final[rep].itemMeta && map[n].itemMeta) final[rep].itemMeta=map[n].itemMeta;
+    });
+  }
   map=final;
   /* 4) 计算进度 + 排序 */
   var arr=Object.keys(map).map(function(n){
@@ -2123,12 +2129,18 @@ function aggregateByProj(){
     var done=p.todos.filter(function(s){return s.t.done;}).length + p.extraSteps.filter(function(s){return s.done;}).length;
     var total=p.todos.length + p.extraSteps.length;
     p.doneCnt=done; p.total=total;
-    p.isDone=(total>0 && done===total) || p.done; /* 全部完成 或 item 标记done */
+    /* v93 解耦「步骤全勾完」与「项目已完成」：
+       stepsDone = 仅所有步骤勾完（用于变灰，不等同已完成）；
+       isDone    = 仅用户点"✓完成"把 item.done 置真才成立（决定进"已完成"折叠区）。
+       旧 p.isDone=(done===total)||p.done 会让"前面步骤都做完了、但下一步还没写"的项目被误判已完成。 */
+    p.stepsDone=(total>0 && done===total);
+    p.isDone=!!p.done;
     return p;
   });
   arr.sort(function(a,b){
-    if(a.isDone!==b.isDone) return a.isDone?1:-1; /* 进行中在前 */
-    return b.total-a.total; /* 多步骤在前 */
+    if(a.isDone!==b.isDone) return a.isDone?1:-1;            /* 主动完成沉底（已完成区） */
+    if(a.stepsDone!==b.stepsDone) return a.stepsDone?1:-1;   /* 步骤全勾完的灰卡靠后（仍在进行中区） */
+    return b.total-a.total;                                   /* 多步骤在前 */
   });
   return arr;
 }
@@ -2305,6 +2317,7 @@ function projCard(proj){
   var cat=it?esc(it.cat||'其他'):'清单【】';
   var meta=it?((it.owner?('流转 '+esc(it.owner)):'')+(it.due?((it.owner?' · ':'')+'计划 '+esc(it.due)):'')):'来自清单 todo 自动聚合';
   var allDone=proj.isDone;
+  var stepsDoneGray=(proj.stepsDone && !proj.isDone); /* 步骤全勾完但未主动点"✓完成" → 灰卡，仍在进行中区 */
   /* 步骤列表：清单 todos + 附加 steps 合并为一个列表。
      优先按「手动拖拽顺序号 _order」排（用户拖过就固定它的先后，日期只当标签不再决定顺序）；
      没拖过（无 _order）的排后面，按时间先后排。不再区分"清单步骤/附加步骤"。 */
@@ -2327,9 +2340,9 @@ function projCard(proj){
   stepsHtml+='<div class="nproj-add" onclick="addTodoToProj(\''+escAttr(proj.name)+'\')">＋ 添加步骤（来自清单或附加）</div>';
   stepsHtml+='</div>';
 
-  var progTag='<span class="nproj-progress'+(allDone?' all-done':'')+'">'+proj.doneCnt+'/'+proj.total+'</span>';
+  var progTag='<span class="nproj-progress'+(allDone?' all-done':(stepsDoneGray?' steps-done':''))+'">'+proj.doneCnt+'/'+proj.total+'</span>';
 
-  return '<div class="nproj-card'+(allDone?' nproj-done':'')+'">'
+  return '<div class="nproj-card'+(allDone?' nproj-done':(stepsDoneGray?' nproj-steps-done':''))+'">'
     +'<div class="nproj-h">'
     +'<span class="nproj-cat">'+cat+'</span>'
     +'<span class="nproj-name" contenteditable="true" spellcheck="false" onblur="inlineRenameProj(this,\''+escAttr(proj.name)+'\')" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}else if(event.key===\'Escape\'){this.textContent=\''+escAttr(proj.name)+'\';this.blur();}" title="点击编辑标题，回车保存">📌 '+esc(proj.name)+'</span>'
