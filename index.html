@@ -1455,7 +1455,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v90</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v91</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -1763,7 +1763,6 @@ function renderToday(){
 /* 用户可编辑的事项名称映射：key=显示名，value=匹配关键词数组（灵活模糊匹配） */
 var PROJ_ALIAS_KEY = 'hanyang_projAliases';
 function loadProjAliases(){ try{ return JSON.parse(localStorage.getItem(PROJ_ALIAS_KEY)||'{}'); }catch(e){ return {}; } }
-function saveProjAliases(a){ try{ localStorage.setItem(PROJ_ALIAS_KEY, JSON.stringify(a)); }catch(e){} }
 var projAliases = loadProjAliases();
 
 /* 从事项文字中提取【】内的内容 */
@@ -1791,12 +1790,22 @@ function tagsMatch(tagA, tagB){
   return kwB.some(function(k){return setA[k];});
 }
 
-/* 从文本中提取中文 bigram（二字滑动窗口），用于项目名语义相似度判定 */
-function chineseBigrams(text){
-  var cn=(text||'').replace(/[^\u4e00-\u9fff]/g,'');
+/* 提取项目名里的"编号"数字（先去掉月份，避免"7月"的数字干扰 -18条/-22条 的编号判断） */
+function projNumTokens(name){
+  var m=extractMonth(name);
+  var s=String(name||'');
+  if(m) s=s.replace(m,'');
+  return (s.match(/\d+/g)||[]);
+}
+/* 项目名 token：中文 bigram + 拉丁词 + 数字编号（去月份），供相似度比较 */
+function projNameTokens(name){
+  var s=String(name||'');
+  var cn=s.replace(/[^\u4e00-\u9fff]/g,'');
   var bg=[];
   for(var i=0;i<cn.length-1;i++){ bg.push(cn.substring(i,i+2)); }
-  return bg;
+  var latin=(s.match(/[a-zA-Z]+/g)||[]).map(function(x){return x.toLowerCase();});
+  var digits=projNumTokens(name);
+  return {bg:bg, latin:latin, digits:digits};
 }
 
 /* 提取标签中的月份标识（如"8月"/"9月"/"7月"），用于强制区分不同月份的事项 */
@@ -1811,28 +1820,45 @@ function extractMonth(name){
 
 /* 判断两个项目组名是否应合并：
    ① 月份标识不同 → 强制不合并（解决"8月XX"被归到"9月XX"的误合并）；
-   ② 月份相同或均无月份 → 再用中文 bigram 重叠度判定（解决同一月内【】文字略不一致） */
+   ② 双方都含数字编号却不共享任何一个 → 不合并（解决"7月商品卡裂变视频-18条"被误并到"-22条"）；
+   ③ 中文 bigram 重叠≥2 → 合并（解决同月内【】文字略不一致，如"8月10条产品视频"与"8月原创10条产品视频"）；
+   ④ 无中文或中文不足时，靠拉丁词+数字编号共同匹配（解决"58位KOC / 58KOC / 58位KOC发布"这类纯字母数字名）。 */
 function projNamesShouldMerge(nameA, nameB){
   if(!nameA || !nameB || nameA===nameB) return false;
   var mA = extractMonth(nameA), mB = extractMonth(nameB);
   if(mA && mB && mA!==mB) return false; /* 不同月份，绝不合并 */
-  var bgA=chineseBigrams(nameA);
-  var bgB=chineseBigrams(nameB);
-  if(!bgA.length || !bgB.length) return false;
-  var setA={}; bgA.forEach(function(b){setA[b]=true;});
-  var inter = bgB.filter(function(b){return setA[b];}).length;
-  /* 至少 2 个 bigram 重叠 且 Jaccard > 0.25 */
-  return inter >= 2 && inter / (bgA.length + bgB.length - inter) > 0.25;
+  var A=projNameTokens(nameA), B=projNameTokens(nameB);
+  /* ② 编号硬门槛：都有编号却完全不相交 → 不合并 */
+  if(A.digits.length && B.digits.length){
+    var dShare=A.digits.filter(function(d){return B.digits.indexOf(d)>=0;}).length;
+    if(!dShare) return false;
+  }
+  /* ③ 中文 bigram 重叠 */
+  if(A.bg.length && B.bg.length){
+    var bgA={}; A.bg.forEach(function(b){bgA[b]=true;});
+    var inter=A.bg.filter(function(b){return bgA[b] && B.bg.indexOf(b)>=0;}).length;
+    if(inter>=2) return true;
+  }
+  /* ④ 无中文或中文不足：靠拉丁词+数字编号共同匹配 */
+  if(!A.bg.length || !B.bg.length){
+    var lA={}; A.latin.forEach(function(x){lA[x]=true;});
+    var lShare=A.latin.filter(function(x){return lA[x] && B.latin.indexOf(x)>=0;}).length;
+    var dSh=A.digits.filter(function(d){return B.digits.indexOf(d)>=0;}).length;
+    return (A.latin.length>0||B.latin.length>0) && lShare>0 && dSh>0;
+  }
+  return false;
 }
 
-/* 语义相似度打分（Jaccard），供"选最相似锚定项"用；与 projNamesShouldMerge 同源 */
+/* 语义相似度打分（Jaccard，中文bigram+拉丁词+数字编号 并集），供"选最相似锚定项"用；与 projNamesShouldMerge 同源 */
 function projSimScore(nameA, nameB){
-  var bgA=chineseBigrams(nameA);
-  var bgB=chineseBigrams(nameB);
-  if(!bgA.length || !bgB.length) return 0;
-  var setA={}; bgA.forEach(function(b){setA[b]=true;});
-  var inter=bgB.filter(function(b){return setA[b];}).length;
-  return inter / (bgA.length + bgB.length - inter);
+  if(!nameA || !nameB || nameA===nameB) return 1;
+  var A=projNameTokens(nameA), B=projNameTokens(nameB);
+  var union={}, inter=0;
+  A.bg.concat(A.latin, A.digits).forEach(function(t){ union[t]=0; });
+  B.bg.concat(B.latin, B.digits).forEach(function(t){ if(t in union) union[t]++; });
+  var keys=Object.keys(union);
+  keys.forEach(function(k){ if(union[k]>0) inter++; });
+  return keys.length ? inter/keys.length : 0;
 }
 
 /* 对一组项目名做语义归并：返回映射表 {原名称: 代表名称}，代表名称取先出现/较短的 */
@@ -2183,10 +2209,16 @@ function splitStepMeta(text){
 function projTodoRow(projName, s, idx, isCurrent){
   var t=s.t;
   var done=!!t.done;
-  var who=t.contact||'';
   var displayText=t.text||'';
-  /* 兜底：contact 为空时从文字里提取「谁」（如"梅喜-推进拍摄"），与附加步骤行为一致 */
-  if(!who){ var pw=parseWhoFromText(displayText); if(pw.who){ who=pw.who; displayText=pw.rest; } }
+  /* 归属判定（诉求5）：我的待办(owner=me)=我方；对方待办(owner=them)=对接方(contact)，
+     若文字里写了 xx- 则优先用 xx。只读 owner/contact，不改任何清单数据。 */
+  var who='';
+  if(t.owner==='me'){ who='我方'; }
+  else {
+    var pw=parseWhoFromText(displayText);
+    if(pw.who){ who=pw.who; displayText=pw.rest; }
+    else who=t.contact||'';
+  }
   var wc=whoClass(who);
   var whoTag=who?'<span class="nproj-who nproj-who-'+wc+'">'+esc(who)+'</span>':'';
   /* 重复徽章 */
@@ -2270,7 +2302,7 @@ function projCard(proj){
      优先按「手动拖拽顺序号 _order」排（用户拖过就固定它的先后，日期只当标签不再决定顺序）；
      没拖过（无 _order）的排后面，按时间先后排。不再区分"清单步骤/附加步骤"。 */
   var rows=[];
-  proj.todos.forEach(function(s){ rows.push({kind:'todo', s:s, ord:(typeof s.t._order==='number'?s.t._order:Infinity), dKey:normDateKey(s.t.due||s.date), done:!!s.t.done}); });
+  proj.todos.forEach(function(s){ rows.push({kind:'todo', s:s, ord:(typeof s.t._order==='number'?s.t._order:Infinity), dKey:normDateKey(s.date), done:!!s.t.done}); });
   proj.extraSteps.forEach(function(s,i){ rows.push({kind:'extra', s:s, idx:i, ord:(typeof s._order==='number'?s._order:Infinity), dKey:normDateKey(s.due), done:!!s.done}); });
   rows.sort(function(a,b){
     if(a.ord!==b.ord) return a.ord<b.ord?-1:1;   /* 拖过的手动顺序优先 */
@@ -2575,10 +2607,10 @@ function projDragEnd(ev){
   }
   _dragData=null;
 }
-/* 在项目卡上加一条 todo（弹窗输入文字/谁） */
+/* 在项目卡上加一条步骤：只写入项目卡自己的 steps 数组（item.steps），
+   不再往清单 tab 造 todo（诉求2：项目 tab 操作不影响清单 tab）。 */
 function addTodoToProj(projName){
-  var today=currentDate;
-  var input=prompt('给「'+projName+'」加一步：\n（开头可写负责人和日期，顺序随意，例：\n  [梅喜] 推进拍摄\n  梅喜-推进拍摄\n  周一8.24 我方-确认脚本）','');
+  var input=prompt('给「'+projName+'」加一步（仅记在项目tab，不影响清单）：\n（开头可写负责人和日期，顺序随意，例：\n  [梅喜] 推进拍摄\n  梅喜-推进拍摄\n  周一8.24 我方-确认脚本）','');
   if(input===null) return;
   input=input.trim();
   if(!input){ toast('内容不能为空'); return; }
@@ -2586,19 +2618,18 @@ function addTodoToProj(projName){
   var meta=splitStepMeta(input);
   var who=meta.who, due=meta.due, text=meta.text;
   if(!text){ toast('内容不能为空'); return; }
-  if(!days[today]) days[today]={todos:[]};
-  days[today].todos.push({
-    id:Date.now(),
-    text:text,
-    contact:who,
-    _projName:projName,
-    due:due,
-    done:false,
-    _t:Date.now()
-  });
-  saveDays();
+  /* 找同名 item；没有就建一个（仅项目tab元数据，不碰清单 days） */
+  var it=items.find(function(x){return x.title===projName;});
+  if(!it){
+    it={id:Date.now(), cat:'其他', title:projName, node:'（自动建项）', next:'', steps:[], owner:'', act:'跟进', due:'', note:''};
+    items.push(it);
+  }
+  ensureSteps(it);
+  it.steps.push({text:text, done:false, who:who||'', due:due||''});
+  it.next=it.steps.map(function(s){return (s.done?'✓ ':'')+(s.who?('['+s.who+'] '):'')+(s.due?('('+s.due+') '):'')+s.text;}).join(' → ');
+  saveItems();
   refreshItems();
-  toast('已添加步骤');
+  toast('已添加步骤（仅项目tab，不影响清单）');
 }
 /* 勾选/取消附加步骤（item.steps） */
 function toggleProjExtraStep(projName, idx){
@@ -2714,145 +2745,6 @@ function delProjItem(projName){
   toast('已删除项目元数据');
 }
 /* 找【】-tagged 但无对应 item 的项目（自动抓取用） */
-function getAutoDetectedProjects(){
-  var map={};
-  Object.keys(days).forEach(function(dt){
-    (days[dt].todos||[]).forEach(function(t){
-      if(t.daily) return;
-      var proj=t._projName||t.project||'';
-      if(!proj) return;
-      /* 已被某个 item 接管的 todo 跳过（matchItemForTodo 也按 _projName 匹配） */
-      if(t.itemId) return;
-      var m=matchItemForTodo(t);
-      if(m) return; /* 模糊匹配到 item 也不算 orphan */
-      if(!map[proj]) map[proj]=[];
-      map[proj].push({date:dt, t:t});
-    });
-  });
-  var names=Object.keys(map);
-  /* 语义归并：标签略不同但实质相同的项目合并（"8月原创10条产品视频"与"8月10条产品视频"） */
-  if(typeof mergeProjGroups==='function'){
-    var mergeMap=mergeProjGroups(names);
-    var merged={};
-    names.forEach(function(pn){
-      var rep=mergeMap[pn]||pn;
-      if(!merged[rep]) merged[rep]=[];
-      map[pn].forEach(function(s){ merged[rep].push(s); });
-    });
-    map=merged;
-    if(typeof dedupeSteps==='function'){
-      Object.keys(map).forEach(function(pn){ map[pn]=dedupeSteps(map[pn]); });
-    }
-  }
-  return map;
-}
-/* 渲染【】自动抓取的卡片（只读 + 转为事项按钮） */
-function autoCard(projName, steps){
-  steps.sort(function(a,b){return a.date<b.date?-1:1;});
-  var doneCnt=steps.filter(function(s){
-    var t=s.t; return t.owner==='them' ? !!t.done : !!t.done;
-  }).length;
-  var stepsHtml='<div class="nsteps">'+steps.map(function(s){
-    var t=s.t; var done=t.owner==='them' ? !!t.done : !!t.done;
-    var who=t.contact||'';
-    var wc=whoClass(who);
-    var whoTag=who?'<span class="nstep-who nstep-who-'+wc+'">'+esc(who)+'</span>':'';
-    return '<div class="nstep'+(done?' is-done':'')+'">'
-      +'<span class="nstep-box nstep-box-static" title="只读，需转成事项后才能勾选">'+(done?'✓':'')+'</span>'
-      +whoTag
-      +'<span class="nstep-txt">'+esc(t.text)+'</span>'
-      +'<span class="nstep-due">'+esc(s.date)+'</span>'
-      +'</div>';
-  }).join('')+'</div>';
-  return '<div class="ncard ncard-auto">'
-    +'<div class="ncard-h">'
-    +'<span class="ncat ncat-auto">【】自动</span>'
-    +'<b>📌 '+esc(projName)+'</b>'
-    +'<span class="nprogress">'+doneCnt+'/'+steps.length+' 步</span>'
-    +'<button class="nconvert" onclick="convertAutoToItem(\''+escAttr(projName)+'\')" title="把这条自动抓取转为正式事项，可编辑步骤、流转、何时">转为事项</button>'
-    +'</div>'
-    +stepsHtml
-    +'</div>';
-}
-/* 一键把【】自动抓取的项目转为正式 item（首步复制所有 todo 为 steps） */
-function convertAutoToItem(projName){
-  if(items.some(function(it){return it.title===projName && !it.done;})){
-    toast('已存在同名事项，无需重复转'); return;
-  }
-  var it={
-    id:Date.now(),
-    cat:'其他',
-    title:projName,
-    node:'从清单【】自动转来，待补充当前节点',
-    next:'',
-    steps:[],
-    owner:'',
-    act:'跟进',
-    due:'',
-    note:'自动从清单【'+projName+'】标签转来。'+(items.some(function(x){return x.title===projName;})?'\n（与已有同名已完成事项合并）':'')
-  };
-  /* 把所有该项目的 todo 转成 step */
-  var allTodos=[];
-  Object.keys(days).forEach(function(dt){
-    (days[dt].todos||[]).forEach(function(t){
-      var pn=t._projName||t.project||'';
-      if(pn!==projName) return;
-      if(t.daily) return;
-      allTodos.push({date:dt, t:t});
-    });
-  });
-  allTodos.sort(function(a,b){return a.date<b.date?-1:1;});
-  allTodos.forEach(function(s){
-    var t=s.t;
-    it.steps.push({
-      text: t.text,
-      done: t.owner==='them' ? !!t.done : !!t.done,
-      due: s.date,
-      who: t.contact || ''
-    });
-  });
-  it.next=it.steps.map(function(s){return (s.done?'✓ ':'')+(s.who?('['+s.who+'] '):'')+(s.due?('('+s.due+') '):'')+s.text;}).join(' → ');
-  items.push(it);
-  saveItems();
-  relinkAndRecount();
-  refreshItems();
-  toast('已转为正式事项「'+projName+'」');
-}
-/* 行内添加步骤（不打开弹层，三连问：文字 / 谁 / 日期） */
-function addStepToItem(itemId){
-  var it=items.find(function(x){return x.id===itemId;});
-  if(!it){ toast('事项不存在'); return; }
-  var text=prompt('新步骤内容：\n（可带负责人和日期，例：梅喜-8-24 推进拍摄 / 周一8.24 我方-确认脚本）');
-  if(text===null) return;
-  text=String(text).trim();
-  if(!text){ toast('步骤内容不能为空'); return; }
-  /* 文字里写的负责人/日期优先（用户明确写出来的为准） */
-  var meta=splitStepMeta(text);
-  var whoAuto=meta.who, dueAuto=meta.due; text=meta.text;
-  var who=prompt('这一步在「谁」那里？\n输入"我方" / "对方" / 具体人名（如 梅喜），留空不指定', whoAuto||'我方');
-  if(who===null) return;
-  var due=prompt('计划日期（留空跳过）：\n（可填 M-D 如 9-5、周一8.24，或完整日期 2026-09-05）', dueAuto||'');
-  if(due===null) return;
-  who=String(who||'').trim() || whoAuto;
-  due=canonDate(String(due||'').trim() || dueAuto);
-  ensureSteps(it);
-  it.steps.push({text:text, done:false, who:String(who).trim(), due:String(due||'').trim()});
-  it.next=it.steps.map(function(s){return (s.done?'✓ ':'')+(s.who?('['+s.who+'] '):'')+(s.due?('('+s.due+') '):'')+s.text;}).join(' → ');
-  refreshItems();
-  toast('已添加步骤'+(who?('（'+who+'）'):''));
-}
-/* 行内删除步骤 */
-function delStep(itemId, idx){
-  if(!confirm('确认删除此步骤？')) return;
-  var it=items.find(function(x){return x.id===itemId;});
-  if(!it) return;
-  ensureSteps(it);
-  if(!it.steps[idx]) return;
-  it.steps.splice(idx, 1);
-  it.next=it.steps.map(function(s){return (s.done?'✓ ':'')+(s.who?('['+s.who+'] '):'')+(s.due?('('+s.due+') '):'')+s.text;}).join(' → ');
-  refreshItems();
-  toast('已删除步骤');
-}
 /* 兼容：无 steps 时从 next 按 →/换行 拆成 steps（幂等，已有 steps 不动） */
 /* 提取 who 字段：旧数据嵌在文字里（"8-19 我方-确认脚本"），新数据存 who 字段 */
 function ensureSteps(it){
@@ -2956,118 +2848,7 @@ function whoClass(who){
   if(w==='对方'||w==='ta'||w==='them'||w==='他们'||w==='他方') return 'them';
   return 'other';
 }
-/* 步骤进度：已完成数 / 总数 */
-function stepProgress(it){
-  var st=it.steps||[];
-  var done=st.filter(function(s){return s.done;}).length;
-  return {done:done,total:st.length};
-}
-/* 单条节点卡（纯渲染，不写数据；编辑/勾选走 onclick） */
-function nodeCard(it,isDone){
-  ensureSteps(it);
-  var due=it.due?esc(it.due):'<span class="nmiss">待填</span>';
-  var prog=stepProgress(it);
-  var allDone=(prog.total>0 && prog.done===prog.total);
-  /* 步骤进度标签 */
-  var progTag=(prog.total>0)?'<span class="nprogress'+(allDone?' all-done':'')+'">步骤 '+prog.done+'/'+prog.total+'</span>':'';
-  /* 步骤列表 */
-  var stepsHtml='';
-  if(prog.total){
-    stepsHtml+='<div class="nsteps">';
-    it.steps.forEach(function(s,i){
-      /* 优先用 step.who；空时回退 parseWhoFromText 提取（旧数据兼容） */
-      var who=s.who||'';
-      var displayText=s.text;
-      if(!who){ var p=parseWhoFromText(s.text); if(p.who){ who=p.who; displayText=p.rest; } }
-      var wc=whoClass(who);
-      var whoTag=who?'<span class="nstep-who nstep-who-'+wc+'">'+esc(who)+'</span>':'';
-      stepsHtml+='<div class="nstep'+(s.done?' is-done':'')+'">'
-        +'<span class="nstep-box" onclick="toggleStep('+it.id+','+i+')" title="勾选/取消">'+(s.done?'✓':'')+'</span>'
-        +whoTag
-        +'<span class="nstep-txt">'+esc(displayText)+'</span>'
-        +(s.due?'<span class="nstep-due">'+esc(canonDate(s.due))+'</span>':'')
-        +'<span class="nstep-del" onclick="delStep('+it.id+','+i+')" title="删除此步">×</span>'
-        +'</div>';
-    });
-    /* 添加步骤行内按钮 */
-    stepsHtml+='<div class="nstep-add" onclick="addStepToItem('+it.id+')">＋ 添加步骤（文字 / 谁 / 日期）</div>';
-    stepsHtml+='</div>';
-  } else {
-    /* 无步骤时也给个加步骤入口 */
-    stepsHtml+='<div class="nstep-add" onclick="addStepToItem('+it.id+')" style="margin-top:6px;">＋ 添加第一个步骤</div>';
-  }
-  /* 关联 todo 进度（来自清单自动归类） */
-  var linked=getLinkedTodos(it);
-  var linkHtml='';
-  if(linked.total>0){
-    linkHtml='<div class="nlinked">清单关联 '+linked.done+'/'+linked.total+'：';
-    linked.list.forEach(function(l){
-      linkHtml+='<span class="nlinked-item'+(l.done?' done':'')+'">'+esc(l.date)+' '+esc(l.text)
-        +'<span class="nunlink" onclick="unbindTodo('+it.id+',\''+String(l.id)+'\')" title="解除关联">×</span></span>';
-    });
-    linkHtml+='</div>';
-  }
-  var now=it.node?esc(it.node):'<span class="nmiss">待填</span>';
-  return '<div class="ncard'+(isDone?' ncard-done':'')+'">'
-    +'<div class="ncard-h"><span class="ncat">'+esc(it.cat||'')+'</span><b>'+esc(it.title)+'</b>'+progTag
-    +'<button class="ndone-btn'+(isDone?' is-done':'')+'" onclick="toggleDone('+it.id+')" title="'+(isDone?'重开':'标记完成')+'">'+(isDone?'↺':'✓')+'</button>'
-    +'<button class="nedit" onclick="editItem('+it.id+')" title="编辑：当前节点 / 下一步 / 流转到谁 / 何时">✎</button></div>'
-    +'<div class="nrow"><span class="nlbl">当前</span><span class="nnow">'+now+'</span></div>'
-    +stepsHtml
-    +'<div class="nrow"><span class="nlbl">流转</span><span class="nowner">'+esc(it.owner||'')+'</span>'
-    +'<span class="nlbl">何时</span><span class="ndue">'+due+'</span></div>'
-    +linkHtml
-    +'</div>';
-}
 function refreshItems(){ refreshKnownWhos(); items.forEach(ensureSteps); renderToday(); renderNodePanel(); saveItems(); }
-function toggleDone(id){ const it=items.find(x=>x.id===id); if(it){ it.done=!it.done; it._t=Date.now(); refreshItems(); toast(it.done?"已标记完成":"已重开"); } }
-/* 勾选/取消单步 —— 同步更新对应 next 文本 */
-function toggleStep(itemId,idx){
-  var it=items.find(x=>x.id===itemId); if(!it||!it.steps||!it.steps[idx]) return;
-  it.steps[idx].done=!it.steps[idx].done;
-  /* 同步 next 字段：done 的前加 ✓；who 写入 [谁]；due 写入 (日期) */
-  it.next=it.steps.map(function(s){return (s.done?'✓ ':'')+(s.who?('['+s.who+'] '):'')+(s.due?('('+s.due+') '):'')+s.text;}).join(' → ');
-  /* 全部步骤完成 → 自动标记 item done（可手动 ↺ 重开） */
-  var prog=stepProgress(it);
-  if(prog.total>0 && prog.done===prog.total){ it.done=true; toast("该事项所有步骤已完成 ✓"); }
-  else if(it.done && !prog.allDone){ /* 保持 done 但提示 */ }
-  refreshItems();
-  toast(it.steps[idx].done?"步骤已完成":"步骤重开");
-}
-/* ===== 清单→节点 打通（第2步）===== */
-/* 找某 item 关联的所有 todo（todo.itemId===it.id），返回 {list,done,total} */
-function getLinkedTodos(it){
-  var list=[];
-  Object.keys(days).forEach(function(dt){
-    (days[dt].todos||[]).forEach(function(t){
-      if(t.itemId===it.id) list.push({id:t.id,date:dt,text:t.text,done:!!t.done});
-    });
-  });
-  list.sort(function(a,b){return a.date<b.date?-1:1;});
-  var done=list.filter(function(l){return l.done;}).length;
-  return {list:list,done:done,total:list.length};
-}
-/* 模糊匹配：todo._projName 或 todo.project 是否对应某 item（标题包含关系，保守匹配） */
-function matchItemForTodo(todo){
-  if(!items||!items.length) return null;
-  var proj=(todo._projName||todo.project||'').trim();
-  if(!proj) return null;
-  /* 精确匹配优先 */
-  var exact=items.find(function(it){return it.title===proj && !it.done;});
-  if(exact) return exact;
-  /* 包含匹配（item.title 包含 proj 或 proj 包含 item.title），但排除已done的 */
-  var best=null,bestLen=0;
-  items.forEach(function(it){
-    if(it.done) return;
-    var t=it.title||'';
-    if(!t) return;
-    /* 关键词交集匹配：取 proj 和 title 的关键词，交集比例高则匹配 */
-    if(t.indexOf(proj)>=0 || proj.indexOf(t)>=0){
-      if(t.length>bestLen){ best=it; bestLen=t.length; }
-    }
-  });
-  return best;
-}
 /* 自动关联 + 重算进度：扫所有 todo，按 _projName 匹配 item，写 todo.itemId */
 /* 幂等：已有 itemId 且对应 item 仍存在的，不覆盖（用户手动解绑的不重绑） */
 /* v2: 节点面板已改为【】聚合（aggregateByProj），不再依赖 todo.itemId。
@@ -3081,16 +2862,6 @@ function relinkAndRecount(){
   });
   if(dirty){ saveDays(); }
   return dirty;
-}
-/* 解绑某 todo 和 item */
-function unbindTodo(itemId,todoId){
-  Object.keys(days).forEach(function(dt){
-    (days[dt].todos||[]).forEach(function(t){
-      if(t.itemId===itemId && String(t.id)===String(todoId)){ t.itemId=null; }
-    });
-  });
-  saveDays(); renderNodePanel();
-  toast("已解除关联");
 }
 function quickDone(id){ const it=items.find(x=>x.id===id); if(it){ it.done=true; it._t=Date.now(); refreshItems(); toast("已完成 ✓"); } }
 function delItem(id){ if(confirm("确认删除该事项？")){ items=items.filter(x=>x.id!==id); try{ const done=JSON.parse(localStorage.getItem(KEY_SEED_DONE)||"{}"); done[id]=true; localStorage.setItem(KEY_SEED_DONE, JSON.stringify(done)); }catch(e){} refreshItems(); toast("已删除"); } }
