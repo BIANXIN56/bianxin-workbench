@@ -1457,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v98</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v99</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -3025,11 +3025,11 @@ function defaultDashData(ym){
           blocks: [
             { id:'biz-chsum', type:'channel-sum', data:{
               items: [
-                { label:'抖音 GSV 目标', value:'15.8万', sub:'自营4.74+达短6.32+达播4.74', color:'brand' },
-                { label:'天猫 GSV 目标', value:'2万', sub:'费用 0.6万', color:'purple' },
-                { label:'视频号 GSV 目标', value:'8万', sub:'', color:'purple' }
+                { label:'抖音 GSV 目标', value:158000, sub:'自营4.74+达短6.32+达播4.74', color:'brand' },
+                { label:'天猫 GSV 目标', value:20000, sub:'费用 0.6万元', color:'purple' },
+                { label:'视频号 GSV 目标', value:80000, sub:'', color:'purple' }
               ],
-              total: { label:'三渠道合计', value:'≈25.8万', sub: ym==='2026-07'?'实际仅 0.79万':'7月实际仅 0.79万', color:'brand' }
+              total: { label:'三渠道合计', value:258000, sub: ym==='2026-07'?'实际仅 0.79万元':'7月实际仅 0.79万元', color:'brand' }
             }},
             { id:'biz-tbl', type:'table', title:'▎ 抖店GSV 细分', data:{
               headers:['投放模块','GSV占比','GSV目标','推广费用','预期ROI','核心任务'],
@@ -3040,7 +3040,7 @@ function defaultDashData(ym){
               ],
               total: { cells:['抖音抖店 合计','100%','15.8 万','11.90 万','1.33','全域投放统筹，控费提效'] }
             }},
-            { id:'biz-note', type:'note', data:{ content:'💡 核心策略：自营商品卡(30%)与合作达短/达播(70%)双轮驱动，总推广费用控制在 11.90 万。' } },
+            { id:'biz-note', type:'note', data:{ content:'💡 核心策略：自营商品卡(30%)与合作达短/达播(70%)双轮驱动，总推广费用控制在 11.9万元。' } },
             { id:'biz-channel-bars', type:'channel-bars', data:{ title:'▎ 各渠道 GSV 目标 vs 实际（元）', channels:[
               { id:'douyin', label:'抖音', target:265000, act:0 },
               { id:'tmall',  label:'天猫', target:30000,  act:0 },
@@ -3470,11 +3470,20 @@ function migrateV97(D, ym){
           if(!isMoneyCard({nl: it.label})) return;
           var y = toYuan(it.value);
           if(it.value !== y){ it.value = y; changed = true; }
+          var ns = unitWan(it.sub);
+          if(ns !== it.sub){ it.sub = ns; changed = true; }
         });
         if(blk.data.total && isMoneyCard({nl: blk.data.total.label})){
           var ty = toYuan(blk.data.total.value);
           if(blk.data.total.value !== ty){ blk.data.total.value = ty; changed = true; }
+          var ts = unitWan(blk.data.total.sub);
+          if(ts !== blk.data.total.sub){ blk.data.total.sub = ts; changed = true; }
         }
+      }
+      /* 说明文字里的 "0.6万" → "0.6万元"（纯文本，无法走 fmtMoney） */
+      if(blk.type === 'note' && typeof blk.data.content === 'string'){
+        var nc = unitWan(blk.data.content);
+        if(nc !== blk.data.content){ blk.data.content = nc; changed = true; }
       }
     });
   }
@@ -3656,6 +3665,8 @@ function editableVal(val, path, opts){
     if(opts.suffix) content = content + opts.suffix;
     if(opts.numberFormat) content = Number(content).toLocaleString();
   }
+  /* 「约等于」前缀：toYuan 会把 ≈ 当噪声剥掉，故在格式化之后再补回，保住「约」的语义 */
+  if(opts.approx && content !== '--') content = '≈' + content;
   var openTag = '<' + tag + ' class="dval ' + cls + '" data-bpath="' + escAttr(path) + '" style="' + style + '" ' + extra + ' onfocus="moneyFocus(this)" onblur="saveDashboardVal(this)" contenteditable="true">';
   var closeTag = '</' + tag + '>';
   return openTag + esc(content) + closeTag;
@@ -3779,6 +3790,18 @@ function addMetricCard(bid, blockId){
 }
 
 /** 3. table: 数据表格 */
+/* 金额列判定：只看「列头语义 + 单元格能否解析成金额」，不依赖各表自录标记 —— 与 isMoneyCard 同一思路 */
+function isMoneyCol(headers, ci){
+  var h = (headers && headers[ci]) || '';
+  return /GSV|费用|金额|消耗|成本/.test(h) && !/占比|ROI|比/.test(h);
+}
+function moneyCell(v){
+  var s = String(v === null || v === undefined ? '' : v).trim();
+  return /\d/.test(s) && /^[¥￥]?[\d,.\s]*(万元|万|元)?$/.test(s);
+}
+function cellMoneyOpts(headers, ci, val){
+  return (isMoneyCol(headers, ci) && moneyCell(val)) ? { money:true } : {};
+}
 function renderDataTable(block, D, bid){
   var d = block.data;
   var html = '';
@@ -3794,7 +3817,7 @@ function renderDataTable(block, D, bid){
     (r.cells||[]).forEach(function(ci, ci2){
       var bold = ci2===0;
       html += '<td>'+(bold?'<b>':'')
-        + editableVal(ci, bpath(bid,block.id,'rows#'+ri+'#cells#'+ci2))
+        + editableVal(ci, bpath(bid,block.id,'rows#'+ri+'#cells#'+ci2), cellMoneyOpts(d.headers, ci2, ci))
         +(bold?'</b>':'')+'</td>';
     });
     html += '</tr>';
@@ -3802,7 +3825,7 @@ function renderDataTable(block, D, bid){
   if(d.total){
     html += '<tr class="total">';
     (d.total.cells||[]).forEach(function(ci, i){
-      html += '<td>'+editableVal(ci, bpath(bid,block.id,'total#cells#'+i))+'</td>';
+      html += '<td>'+editableVal(ci, bpath(bid,block.id,'total#cells#'+i), cellMoneyOpts(d.headers, i, ci))+'</td>';
     });
     html += '</tr>';
   }
@@ -4696,6 +4719,12 @@ function fmtMoney(v){
 }
 /* 兼容旧调用：fmtGSV 统一走 fmtMoney */
 function fmtGSV(v){ return fmtMoney(v); }
+/* ⑤ unitWan：纯文本里的「万」统一成「万元」（只动单位写法，不动数值）。
+     —— 用于 sub / 说明文字这类无法走 fmtMoney 的文本字段（如 "费用 0.6万" → "费用 0.6万元"）。 */
+function unitWan(s){
+  if(typeof s !== 'string') return s;
+  return s.replace(/(\d+(?:\.\d+)?)\s*万(?!元)/g, '$1万元');
+}
 /* ③ isMoneyCard：一张卡是不是金额卡，只看「语义」——不依赖各板块自录的
      prefix / nvSuffix / moneyWan / numberFormat 标记（那正是 v96 显示"6.32 万万元"的根因）。 */
 function isMoneyCard(c){
