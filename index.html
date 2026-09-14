@@ -1457,7 +1457,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v101</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v102</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -1671,6 +1671,9 @@ function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.
 function copy(id){ var el=document.getElementById(id); if(navigator.clipboard){ navigator.clipboard.writeText(el.innerText).then(function(){alert("已复制")}).catch(function(){alert("复制失败，请手动选")}); } else { alert("请手动复制"); } }
 
 const todayStr = (function(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0'); })();
+/* 实时今天：页面可能跨天一直开着，点「今天」/判断「·今天」标签必须按当前真实日期算，
+   不能用 todayStr（页面加载那一刻的日期，跨天后就过期，会显示成昨天的日期）。 */
+function realToday(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0'); }
 let currentDate = todayStr;
 function parseDue(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
 function daysBetween(a,b){ return Math.round((a-b)/86400000); }
@@ -5853,7 +5856,19 @@ function toggleTodo(id){
   if(typeof relinkAndRecount==='function') relinkAndRecount();
   if(typeof renderNodePanel==='function') renderNodePanel();
 }
-function setNote(id,v){ forEachTodoDup(id, function(t){ t.note=v; }); saveDays(); }
+function setNote(id,v){
+  /* v102 修复「勾选后备注消失」：固定项（9001/9002/9003）每天一份独立副本，
+     备注必须写回「正在看的那天」的副本；forEachTodoDup 只命中最早那天的副本，
+     会导致当前天副本的备注一直为空、重渲染后即丢失。
+     优先写回 currentDate 当天副本；非固定项（只存一份）走原 forEachTodoDup 逻辑不变。 */
+  var day=days[currentDate];
+  if(day && Array.isArray(day.todos)){
+    var hit=day.todos.find(function(t){ return _sameId(t.id,id); });
+    if(hit){ hit.note=v; saveDays(); return; }
+  }
+  forEachTodoDup(id, function(t){ t.note=v; });
+  saveDays();
+}
 function addTodo(){
   const c=document.getElementById('addContact').value.trim(), tx=document.getElementById('addText').value.trim();
   const pj=document.getElementById('addProject').value.trim();
@@ -6065,12 +6080,12 @@ function upsertRemind(date, t, suffix){
 function fmtDate(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0'); }
 function shiftDate(n){ const d=parseDue(currentDate); d.setDate(d.getDate()+n); currentDate=fmtDate(d); updateDateUI(); }
 function pickDate(v){ if(v){ currentDate=v; updateDateUI(); } }
-function goToday(){ currentDate=todayStr; updateDateUI(); }
+function goToday(){ currentDate=realToday(); updateDateUI(); }
 function updateDateUI(){
   listEditId=null;
   document.getElementById('datePick').value=currentDate;
   const w=['周日','周一','周二','周三','周四','周五','周六'][parseDue(currentDate).getDay()];
-  const dw=document.getElementById('dweek'); dw.textContent=w+(currentDate===todayStr?' · 今天':''); dw.classList.toggle('istoday', currentDate===todayStr);
+  const dw=document.getElementById('dweek'); dw.textContent=w+(currentDate===realToday()?' · 今天':''); dw.classList.toggle('istoday', currentDate===realToday());
   todos=getDay(currentDate).todos;
   var sc=document.getElementById('scratch'); sc.value=getDay(currentDate).scratch||''; sc.oninput=saveScratch;
   renderTodoList();
