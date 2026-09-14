@@ -1674,7 +1674,7 @@ const todayStr = (function(){ const d=new Date(); return d.getFullYear()+"-"+Str
 /* 实时今天：页面可能跨天一直开着，点「今天」/判断「·今天」标签必须按当前真实日期算，
    不能用 todayStr（页面加载那一刻的日期，跨天后就过期，会显示成昨天的日期）。 */
 function realToday(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0'); }
-let currentDate = todayStr;
+let currentDate = realToday(); /* v102: 默认停在真实当天，根治 todayStr 过期根因 */
 function parseDue(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
 function daysBetween(a,b){ return Math.round((a-b)/86400000); }
 
@@ -4967,7 +4967,7 @@ function thisMonth(){ return new Date().toISOString().slice(0,7); }
 document.getElementById('btnExport').onclick=()=>{
   var o={items:items,res:res.filter(isUserRes),days:days,daily:dailyTpls};
   var blob=new Blob([JSON.stringify(o,null,2)],{type:"application/json"});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download="阿寻工作台备份_"+todayStr+".json"; a.click();
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download="阿寻工作台备份_"+realToday()+".json"; a.click();
   toast("已导出全部备份");
 };
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileInput').click();
@@ -5022,7 +5022,7 @@ document.getElementById('btnMigrate').onclick=function(){
   }
   var blob=new Blob([JSON.stringify({wb_all:all, items:items, res:res.filter(isUserRes), days:days, daily:dailyTpls},null,2)],{type:"application/json"});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download="工作台_全量迁移_"+todayStr+".json"; a.click();
+  a.download="工作台_全量迁移_"+realToday()+".json"; a.click();
   st.style.color='var(--green)';
   st.textContent='✅ 已生成数据文件。请打开【云端 App】（edgeone 链接），在「备份」页点「导入恢复」选中此文件即可完成上云。';
 };
@@ -5089,7 +5089,7 @@ const MON_CONTACTS = ["安棋","梅喜","喜耀","宝丽","思琪"];
 function loadDays(){
   let d=null;
   try{ const raw=localStorage.getItem(KEY_DAYS); if(raw){ const p=JSON.parse(raw); if(p&&typeof p==='object') d=p; } }catch(e){}
-  const monday = mondayOf(todayStr);
+  const monday = mondayOf(realToday());
   const tue = addDaysStr(monday,1), wed = addDaysStr(monday,2);
   if(d){
     /* v61：把所有"数组格式"的日期转成对象格式 {todos:[], scratch:''}。
@@ -5103,9 +5103,9 @@ function loadDays(){
       }
     });
     // 一次性纠偏：旧版曾把周一事项误挂到「今天」，若周一为空且今天整组都是周一对接方，则搬回周一
-    if(!d[monday] && d[todayStr] && Array.isArray(d[todayStr].todos) && d[todayStr].todos.length
-       && d[todayStr].todos.every(function(t){ return MON_CONTACTS.indexOf(t.contact)>=0; })){
-      d[monday]=d[todayStr]; delete d[todayStr];
+    if(!d[monday] && d[realToday()] && Array.isArray(d[realToday()].todos) && d[realToday()].todos.length
+       && d[realToday()].todos.every(function(t){ return MON_CONTACTS.indexOf(t.contact)>=0; })){
+      d[monday]=d[realToday()]; delete d[realToday()];
     }
     // 周二 / 周三 推进清单：仅当该天为空时生成，绝不覆盖你已填的内容
     if(!d[monday]) d[monday]={todos:JSON.parse(JSON.stringify(SEED_TODOS)),scratch:''};
@@ -5478,7 +5478,7 @@ window.addEventListener('beforeunload', function(e){
   }
 });
 // 进入时默认停在「周一」，以便直接看到已恢复的事项（若周一有数据）
-const _MONDAY = mondayOf(todayStr);
+const _MONDAY = mondayOf(realToday());
 if(days[_MONDAY] && days[_MONDAY].todos.length) currentDate = _MONDAY;
 
 /* 在全部天数中按 id 查找一条 todo（用于顺延条目的操作回写原始数据） */
