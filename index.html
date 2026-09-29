@@ -987,6 +987,15 @@ window.addEventListener('error', function(e){
         for(var _i=0;_i<localStorage.length;_i++){ var _lk=localStorage.key(_i); if(_lk && _lk.indexOf('wb_ax_')===0) allKeys.push(_lk); }
         var _seed=window.__wbSeedKeys||{};
         allKeys.forEach(function(k){
+          var _cloudData = existing['ls:'+k] ? existing['ls:'+k].data : null;
+          /* v106：绝不用「更少的数据」覆盖云端（对称于 pullAll 的 _cloudRicher 护栏）。
+             若云端该键明显比本机更全（记录数多出 30% 且至少多 20 条），说明本机是陈旧副本，
+             采用云端版本，绝不回推本机陈旧数据——直接阻断 2026-09-29「旧客户端整包回推覆盖云端」的事故入口。
+             注：pushAll 的 409 冲突锁只在「云端在 GET 之后又被别人改过」时触发，拦不住「本机陈旧副本整包镜像」，
+             因为本机 GET 到的就是当前云端（较全），用同一 sha PUT 时 GitHub 视为无冲突而放行。 */
+          if(_cloudData && _cloudRicher(k, _cloudData, localStorage.getItem(k))){
+            dbg('[push] '+k+' 云端明显更全，保留云端版本（拒绝回推本机陈旧副本）'); return;
+          }
           /* v83：仍是默认模板（用户没编辑过）且云端已有该键 → 保留云端版本，绝不上云。
              pushAll 是全量镜像，不拦就会把空客户端自动生成的默认月份推上去覆盖真实数据。 */
           if(_seed[k] && existing['ls:'+k] && existing['ls:'+k].data){ dbg('[push] '+k+' 为未编辑的默认模板，保留云端版本'); return; }
@@ -1489,7 +1498,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v105</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v106</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
