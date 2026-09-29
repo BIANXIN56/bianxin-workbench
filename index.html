@@ -839,6 +839,20 @@ window.addEventListener('error', function(e){
     /* v81fix：lastpushed 仅存「值的哈希」而非值本身——旧版存全量快照曾膨胀到数 MB 卡死护栏。
        cyrb53 53位哈希，碰撞概率可忽略；护栏只需判断"本地自上次推送后改没改"，哈希足够。 */
     function hashOf(s){ if(s===null||s===undefined) return '0'; s=String(s); var h1=0xdeadbeef^0,h2=0x41c6ce57^0,i=s.length; while(i--){ var c=s.charCodeAt(i); h1=Math.imul(h1^c,2654435761); h2=Math.imul(h2^c,1597334677); } h1=Math.imul(h1^(h1>>>16),2246822507); h1^=Math.imul(h2^(h2>>>13),3266489909); h2=Math.imul(h2^(h2>>>16),2246822507); h2^=Math.imul(h1^(h1>>>13),3266489909); return (4294967296*(2097151&h2)+(h1>>>0)).toString(36); }
+    /* v105：统计某个键的"记录数"，用于判断云端是否明显比本机更全。 */
+    function _countOf(k, s){
+      try{
+        var o=(typeof s==='string')?JSON.parse(s):s; if(!o) return 0;
+        if(k==='wb_ax_days_v1'){ var n=0; Object.keys(o).forEach(function(d){ n+=(((o[d]||{}).todos)||[]).length; }); return n; }
+        if(k==='wb_ax_items_v2'){ return Array.isArray(o)?o.length:0; }
+      }catch(e){}
+      return -1;
+    }
+    function _cloudRicher(k, cloudData, localData){
+      var c=_countOf(k, cloudData), l=_countOf(k, localData);
+      if(c<0 || l<=0) return false;
+      return (c>=l+20) && (c>=l*1.3);
+    }
     function pullAll(){
       var rc=parseInt(localStorage.getItem(_reloadKey)||'0',10);
       dbg('[pull] 开始 token='+(tk?('已填'+tk.length+'字符'):'空')+' reloadCount='+rc);
@@ -881,7 +895,9 @@ window.addEventListener('error', function(e){
              检测到异常大则直接重置为空，避免旧幽灵快照继续干扰判断。 */
           var _lpSz=0; for(var _kk in lp){ _lpSz+=(''+lp[_kk]).length; }
           if(_lpSz>50000){ lp={}; _saveLastPushed(lp); dbg('[pull] 检测到旧版膨胀 lastpushed，已重置'); }
-          var localSynced = (localData!==null && hashOf(localData)===lp[k]);
+          /* v105：兼容 v81 之前的旧格式 lastpushed（存的是"值本身"而非哈希）。
+             不兼容时，任何老客户端每次开页都会被误判成「本机有未推送编辑」→ 获准整份回推云端。 */
+          var localSynced = (localData!==null && (hashOf(localData)===lp[k] || localData===lp[k]));
           if(localData!==null && !localSynced){
             /* v83（核心修复）：以下两种情况「无条件采用云端」，绝不回推。
                (a) _lpKeys===0 —— 本机从未成功推送过任何 wb_ax 数据键，
@@ -896,6 +912,19 @@ window.addEventListener('error', function(e){
               _set(k, cloudData); lp[k]=hashOf(cloudData); _saveLastPushed(lp);
               changed=true; pulled++;
               dbg('[pull] '+k+' 本机无有效编辑（新装/默认模板）→ 无条件采用云端');
+              return;
+            }
+            /* v105（核心护栏）：绝不用"更少的数据"覆盖云端。
+               若云端该键明显比本机更全（记录数多出 30% 且至少多 20 条），
+               说明本机是陈旧副本（换设备 / 长期未刷新的标签页 / 旧版本残留的数据），
+               一律采用云端，绝不回推。
+               2026-09-29 事故：某客户端用 9 月上旬的旧数据整份镜像推上云端，
+               抹掉 2026-09-11 ~ 09-27 共 18 个日期桶 / 118 条待办。 */
+            if(_cloudRicher(k, cloudData, localData)){
+              _snapKey(k);
+              _set(k, cloudData); lp[k]=hashOf(cloudData); _saveLastPushed(lp);
+              changed=true; pulled++;
+              dbg('[pull] '+k+' 云端明显更全，采用云端（拒绝回推本机陈旧副本）');
               return;
             }
             if(k in lp){
@@ -988,9 +1017,11 @@ window.addEventListener('error', function(e){
         console.warn('[sync] push失败', e); keys.forEach(function(k){ dirty[k]=1; }); /* 标回脏，稍后重试 */
       }).then(function(){ pushing=false; pushRetry=0; if(needPush){ needPush=false; pushAll(); } });
     }
-    window.__wbSyncFlush=function(){ forceFull=true; if(!pushing) pushAll(); };
+    window.__wbSyncFlush=function(){ if(window.__wbSyncSkipPush) return; forceFull=true; if(!pushing) pushAll(); };
     /* 供 saveItems/saveDaily 等显式调用的双保险（与 setItem 重写等价，幂等） */
-    window.__markDirty=function(k){ if(k!==TOKEN_KEY){ dirty[k]=1; if(!pt) pt=setTimeout(pushAll,700); } };
+    /* v105：__markDirty / __wbSyncFlush 过去绕过了 __wbSyncSkipPush 护栏，
+     使得"没拿到云端数据"的客户端也能触发整份镜像上传（云端被旧数据覆盖的入口之一）。 */
+  window.__markDirty=function(k){ if(window.__wbSyncSkipPush) return; if(k!==TOKEN_KEY){ dirty[k]=1; if(!pt) pt=setTimeout(pushAll,700); } };
     /* v50fix：彻底移除 Service Worker。
        根因复盘：每次部署改 sw.js 的 CACHE 名 → 浏览器检测到新 SW → Chrome 弹出原生"要重新加载应用吗"对话框；
        且同步逻辑里 pullAll/pushAll 的 409/changed 分支会 location.reload()，重载若撞上 SW 等待态就弹框、并冲掉未保存编辑。
@@ -1206,7 +1237,8 @@ window.addEventListener('error', function(e){
     }
     /* 写完后触发重渲染 + 强制推云端 */
     try{ if(window.bootApp) window.bootApp(); }catch(e){}
-    try{ if(window.__wbSyncFlush) window.__wbSyncFlush(); }catch(e){}
+    /* v105：本机用的是"代码内置的旧快照"时，只落本机、绝不自动推云端（云端是唯一真相源）。 */
+    try{ if(!window.__wbSyncSkipPush && window.__wbSyncFlush) window.__wbSyncFlush(); }catch(e){}
     return {ok:true,added:{days:nDays,items:nItems,daily:nDaily,res:nRes}};
   };
   /* 自动兜底：本机无 13 位时间戳真实待办 → 加性补差（不删除任何已有项） */
@@ -1457,7 +1489,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v104</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v105</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
