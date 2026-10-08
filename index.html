@@ -1498,7 +1498,7 @@ window.addEventListener('error', function(e){
         <h1 data-page-node-id="DRla69ZgBWATxIZoWCFSsa">边昕 · 工作台</h1>
         <p data-page-node-id="TpN0o8MoqFMVnkEzzsrmzG">今日待办 · 数据看板 · 节点跟进 · 成果记录 · 流转看板</p>
       </div>
-      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v106</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
+      <div class="sync" data-page-node-id="HDbOsT1IzzkyUnj537ji95"><span class="dot" data-page-node-id="CTrjUuxIJDsb7g160XTnMN"></span><span id="syncTxt" data-page-node-id="SDBYAe5IxlmswcYDievJAv">本地存储</span> <span id="appVer" title="当前加载的代码构建版本" style="margin-left:6px;font-size:11px;background:#1565c0;color:#fff;padding:1px 6px;border-radius:8px;">v107</span><button id="snapBtn" type="button" title="查看云端覆盖本机前的自动留底，可回滚" style="margin-left:6px;font-size:11px;background:#eef1f4;color:#37474f;border:1px solid #cfd8dc;padding:2px 8px;border-radius:8px;cursor:pointer;">数据保险</button><span id="snapCount" style="margin-left:4px;font-size:11px;color:#78909c;"></span></div>
       <button id="btnExport" class="resync-btn export-btn" title="把当前全部数据下载成一个 JSON 文件存到你电脑，作为独立备份" data-page-node-id="hr4nZL1dab8MoGGBmyexYb">⬇ 导出备份</button>
       <button id="btnResync" class="resync-btn" title="从 GitHub 云端拉取最新数据并覆盖本机（用于找回丢失数据 / 同步另一台设备的改动）。注意：本机尚未上传的改动会被覆盖" data-page-node-id="KKw7Vq8HCGGeEFSWEf5UxX">☁ 从云端恢复数据</button>
     </div>
@@ -5196,6 +5196,10 @@ function purgeGhostTodos(){
    localStorage/云端里的副本，而云端模板没有这个自定义字段 → from 被冲掉 → 9003 又被注入到 8.28 之前。
    规则放代码常量 → 与数据解耦，永不失效。要改起始日，只改这一处。 */
 const DAILY_FROM = {9003:'2026-08-28'};
+/* v107：固定项「结束日」规则——键为固定项 id，值为该日(含)之后不再出现。
+   与 DAILY_FROM 对称，规则放代码常量而非模板字段（模板会被云端同步整体冲掉，见 v89 注释）。
+   停用某固定项只改这一处：9002「【名单】17:00 筛选达人短视频名单」自 2026-09-30 之后停用。 */
+const DAILY_TO = {9002:'2026-09-30'};
 /* v89：清除早于起始日、被误注入并落库的固定项残留（如 8.28 之前的 9003）。
    幂等：每次启动按 DAILY_FROM 核对一遍，脏数据自愈。只删固定项 id，不碰任何用户自建待办。 */
 function purgeEarlyDaily(){
@@ -5207,7 +5211,10 @@ function purgeEarlyDaily(){
     var before=day.todos.length;
     day.todos=day.todos.filter(function(t){
       var f=DAILY_FROM[t.id];
-      return !(f && date < f);
+      if(f && date < f) return false;        // 早于起始日 → 移除
+      var to=DAILY_TO[t.id];
+      if(to && date > to) return false;      // 晚于结束日 → 移除（如 9002 自 2026-09-30 之后）
+      return true;
     });
     removed += before-day.todos.length;
   });
@@ -5224,6 +5231,7 @@ function ensureDaily(date){
   (dailyTpls||[]).forEach(function(tp){
     if(suppressedSeeds && suppressedSeeds.has(tp.id)) return;
     var f=DAILY_FROM[tp.id]; if(f && date < f) return;
+    var to=DAILY_TO[tp.id]; if(to && date > to) return;  // 晚于结束日不注入（如 9002 自 2026-09-30 之后）
     if(!tp.all && (dow===0 || dow===6)) return;
     var existing = day.todos.find(function(t){ return _sameId(t.id,tp.id) && t.daily; });
     if(!existing){
